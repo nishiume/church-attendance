@@ -69,6 +69,30 @@
     .nav-button:hover,
     .nav-button:focus-visible { border-color: var(--primary); }
 
+    .management-menu {
+      display: block;
+      width: min(280px, 100%);
+      min-height: 48px;
+      margin: 14px auto 18px;
+      padding: 8px 12px;
+      border: 1px solid #aeb8b1;
+      border-radius: 10px;
+      background: #fff;
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    .management-menu:focus {
+      border-color: var(--primary);
+      outline: 3px solid rgba(36, 93, 168, 0.16);
+    }
+
+    .management-back {
+      display: block;
+      width: min(620px, 100%);
+      margin: 14px auto 24px;
+    }
+
     main {
       width: min(920px, calc(100% - 32px - env(safe-area-inset-left) - env(safe-area-inset-right)));
       margin: 0 auto;
@@ -742,6 +766,7 @@
     .role-admin-row span { flex: 1; min-width: 160px; }
     .access-admin-row > span { flex: 0 1 auto; min-width: 0; font-weight: 700; }
     .access-admin-row > input { flex: 1 1 260px; }
+    .access-admin-row > .role-select { flex: 0 0 8em; }
     .member-add-form { margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--line); }
     .member-add-form .role-select { width: 100%; height: 60px; }
   </style>
@@ -799,10 +824,11 @@
 
     <section id="admin-panel" class="panel panel--wide" aria-labelledby="admin-title" hidden>
       <h1 id="admin-title">来会状況</h1>
-      <button id="open-role-admin" class="nav-button" type="button" hidden>名簿管理</button>
-      <section aria-label="受付利用者管理">
-        <div id="access-admin-list"></div>
-      </section>
+      <select id="admin-menu" class="management-menu" aria-label="管理メニュー" hidden>
+        <option value="">管理メニュー</option>
+        <option value="roleAdmin">名簿管理</option>
+        <option value="accessAdmin">受付許可</option>
+      </select>
       <div class="admin-controls">
         <div class="admin-control">
           <label for="history-date">表示する日付</label>
@@ -882,6 +908,7 @@
     </section>
     <section id="role-admin-panel" class="panel" aria-labelledby="role-admin-title" hidden>
       <h1 id="role-admin-title">名簿管理</h1>
+      <button id="role-admin-back" class="action-button action-button--secondary management-back" type="button">管理画面へ戻る</button>
       <form id="member-add-form" class="member-add-form" novalidate>
         <h2>新しい人を追加</h2>
         <div class="member-detail-fields">
@@ -907,7 +934,12 @@
         <p id="member-add-message" class="export-message" role="status" hidden></p>
       </form>
       <div id="role-admin-list"></div>
-      <button id="role-admin-back" class="action-button action-button--secondary" type="button">管理画面へ戻る</button>
+    </section>
+
+    <section id="access-admin-panel" class="panel" aria-labelledby="access-admin-title" hidden>
+      <h1 id="access-admin-title">受付許可</h1>
+      <button id="access-admin-back" class="action-button action-button--secondary management-back" type="button">管理画面へ戻る</button>
+      <div id="access-admin-list"></div>
     </section>
   </main>
 
@@ -950,10 +982,12 @@
       nameSelect: document.getElementById("name-select-panel"),
       completion: document.getElementById("completion-panel"),
       admin: document.getElementById("admin-panel"),
-      roleAdmin: document.getElementById("role-admin-panel")
+      roleAdmin: document.getElementById("role-admin-panel"),
+      accessAdmin: document.getElementById("access-admin-panel")
     };
 
     const screenSwitch = document.getElementById("screen-switch");
+    const adminMenu = document.getElementById("admin-menu");
     const nameSelectTitle = document.getElementById("name-select-title");
     const nameSelectTitleText = nameSelectTitle.querySelector("span");
     const familySelectionButton = document.getElementById("family-selection-button");
@@ -1208,7 +1242,7 @@
         renderNameRows();
         name = "nameSelect";
       }
-      if (name === "roleAdmin" && (!adminAuthorized || !masterCode)) name = "keypad";
+      if ((name === "roleAdmin" || name === "accessAdmin") && (!adminAuthorized || !masterCode)) name = "keypad";
       if (name !== "keypad") { keypadBuffer = ""; keypadDisplay.textContent = ""; }
       if (receptionHomeRequested) {
         masterCode = "";
@@ -1230,16 +1264,18 @@
       Object.entries(panels).forEach(([panelName, panel]) => {
         panel.hidden = panelName !== name;
       });
-      const managementContext = name === "roleAdmin" || name === "admin" || name === "keypad";
+      const managementContext = name === "roleAdmin" || name === "accessAdmin" || name === "admin" || name === "keypad";
       screenSwitch.textContent = managementContext
         ? "受付画面"
         : "管理画面";
 
       if (name === "roleAdmin") {
         renderRoleAdmin();
-      } else if (name === "admin") {
-        renderAdmin();
+      } else if (name === "accessAdmin") {
         renderAccessAdmin();
+      } else if (name === "admin") {
+        adminMenu.value = "";
+        renderAdmin();
         document.getElementById("admin-title").focus({ preventScroll: true });
       } else if (name === "keypad") {
         const firstDigit = keypad.querySelector("[data-digit='1']");
@@ -1336,7 +1372,7 @@
     }
 
     function renderAdmin() {
-      document.getElementById("open-role-admin").hidden = !masterCode;
+      adminMenu.hidden = !masterCode;
       const selectedDate = historyDate.value || localDateKey(new Date());
       historyDate.value = selectedDate;
       const roles = loadRoles();
@@ -1528,7 +1564,7 @@
 
     screenSwitch.addEventListener("click", () => {
       if (!authReady || operationPending) return;
-      const leavingManagement = currentScreen === "roleAdmin" || currentScreen === "admin" || currentScreen === "keypad";
+      const leavingManagement = currentScreen === "roleAdmin" || currentScreen === "accessAdmin" || currentScreen === "admin" || currentScreen === "keypad";
       if (leavingManagement) void sync.start();
       else {
         sync.clearAdmin();
@@ -1579,7 +1615,7 @@
       SORTED_ROSTER = [...ROSTER].sort((a, b) => a.familyKana.localeCompare(b.familyKana, "ja"));
       if (adminAuthorized && currentScreen === "admin") renderAdmin();
       if (currentScreen === "roleAdmin") renderRoleAdmin();
-      if (adminAuthorized) renderAccessAdmin();
+      if (currentScreen === "accessAdmin") renderAccessAdmin();
       // Names and family grouping do not change through the supported role UPDATE.
     }
     function renderRoleAdmin() {
@@ -1612,13 +1648,22 @@
         row.append(name, select); list.append(row);
       });
     }
-    document.getElementById("open-role-admin").addEventListener("click", () => {
-      if (authReady && adminAuthorized && !operationPending) {
+    adminMenu.addEventListener("change", () => {
+      if (!authReady || !adminAuthorized || operationPending || !masterCode) {
+        adminMenu.value = "";
+        return;
+      }
+      const destination = adminMenu.value;
+      adminMenu.value = "";
+      if (destination === "roleAdmin") {
         memberAddMessage.hidden = true;
         showScreen("roleAdmin");
+      } else if (destination === "accessAdmin") {
+        showScreen("accessAdmin");
       }
     });
     document.getElementById("role-admin-back").addEventListener("click", () => showScreen("admin"));
+    document.getElementById("access-admin-back").addEventListener("click", () => showScreen("admin"));
     memberAddForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       if (!authReady || !adminAuthorized || operationPending || !masterCode) return;
@@ -1662,17 +1707,29 @@
           const input = document.createElement("input"); input.type = "email";
           input.setAttribute("aria-label", `${person.name}のGoogleメール`);
           input.value = accounts.get(person.id) || ""; input.disabled = allowed;
-          const button = document.createElement("button"); button.type = "button"; button.className = "nav-button";
-          button.textContent = allowed ? "許可を解除" : "メールを登録して許可";
-          button.addEventListener("click", async () => {
-            if (operationPending || !adminAuthorized) return;
-            if (!allowed && (!input.value.trim() || !input.reportValidity())) return;
+          const state = document.createElement("select");
+          state.className = "role-select";
+          state.setAttribute("aria-label", `${person.name}の受付権限`);
+          const allowedOption = document.createElement("option");
+          allowedOption.value = "allowed"; allowedOption.textContent = "許可";
+          const deniedOption = document.createElement("option");
+          deniedOption.value = "denied"; deniedOption.textContent = "不許可";
+          state.append(allowedOption, deniedOption);
+          state.value = allowed ? "allowed" : "denied";
+          state.addEventListener("change", async () => {
+            if (operationPending || !adminAuthorized) { renderAccessAdmin(); return; }
+            const nextAllowed = state.value === "allowed";
+            if (nextAllowed === allowed) return;
+            if (nextAllowed && (!input.value.trim() || !input.reportValidity())) {
+              state.value = "denied";
+              return;
+            }
             setOperationPending(true); clearAppError();
-            try { await sync.setAccess(Number(person.id), allowed ? null : input.value.trim()); }
+            try { await sync.setAccess(Number(person.id), nextAllowed ? input.value.trim() : null); }
             catch (error) { showAppError(error); }
             finally { setOperationPending(false); renderAccessAdmin(); }
           });
-          row.append(label, button, input); list.append(row);
+          row.append(label, input, state); list.append(row);
         });
     }
 
