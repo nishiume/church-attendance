@@ -143,6 +143,8 @@
       text-align: center;
     }
 
+    #name-select-instruction:empty { display: none; }
+
     #reception-panel .reception-clock,
     #keypad-panel .lead,
     #name-select-panel .lead {
@@ -1265,7 +1267,7 @@
       selectedPeople = [];
       familySelectionMode = false;
       nameSelectTitleText.textContent = "名前から選ぶ";
-      nameSelectInstruction.textContent = "名字の最初の行を選んでください";
+      nameSelectInstruction.textContent = "";
       nameOptions.className = "name-options name-options--rows";
       nameOptions.replaceChildren();
       familySelectionButton.hidden = true;
@@ -1910,6 +1912,7 @@
       const current = token => token === epoch;
       function status(message) {
         syncStatus.textContent = message;
+        syncStatus.hidden = message === "接続済み";
         const signedIn = sessionUserId !== null;
         loginButton.hidden = signedIn;
         logoutButton.hidden = !signedIn;
