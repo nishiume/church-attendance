@@ -1910,8 +1910,9 @@
       const current = token => token === epoch;
       function status(message) {
         syncStatus.textContent = message;
-        loginButton.hidden = authReady;
-        logoutButton.hidden = !authReady;
+        const signedIn = sessionUserId !== null;
+        loginButton.hidden = signedIn;
+        logoutButton.hidden = !signedIn;
         retryButton.hidden = !authReady;
         setOperationPending(operationPending);
       }
@@ -1939,7 +1940,7 @@
         const { data, error } = await client.rpc(name, args);
         if (!current(token)) throw new Error("not_ready");
         if (error) {
-          if (error.message === "auth_denied") stop("Googleでログインしてください。");
+          if (error.message === "auth_denied") { sessionUserId = null; stop("Googleでログインしてください。"); }
           if (error.message === "reception_denied") {
             receptionReady = false; attendanceCache.clear();
             if (!adminAuthorized) { memberCache = []; renderFromCache(); showScreen("reception"); }
@@ -2038,7 +2039,7 @@
           const { data, error } = await client.auth.getSession();
           if (!current(token)) return;
           if (error) throw error;
-          if (!data.session) { status("Googleでログインしてください。"); return; }
+          if (!data.session) { sessionUserId = null; status("Googleでログインしてください。"); return; }
           sessionUserId = data.session.user.id;
           const permitted = await rpc("reception_status");
           if (!current(token)) return;
@@ -2065,6 +2066,9 @@
         const code = masterCode;
         const data = await rpc("admin_snapshot", { p_master_code: code });
         if (masterCode !== code) throw new Error("not_ready");
+        if (!data || !Array.isArray(data.members) || !Array.isArray(data.attendance) || !Array.isArray(data.access_accounts)) {
+          throw new Error("invalid_response");
+        }
         memberCache = data.members; accounts = data.access_accounts;
         adminHistory = new Map(data.attendance.map(row => [key(row), row]));
         attendanceCache.forEach(row => adminHistory.set(key(row), row));
