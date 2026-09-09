@@ -98,38 +98,19 @@
       text-align: center;
     }
 
-    .reception-clock {
-      display: flex;
-      justify-content: center;
-      gap: 0.5em;
-      flex-wrap: nowrap;
-      margin: 14px 0 8px;
-      color: var(--primary-dark);
-      font-size: clamp(0.75rem, 5.8cqw, 2rem);
-      font-weight: 800;
-      font-variant-numeric: tabular-nums;
-      white-space: nowrap;
-    }
-
     .lead {
       margin: 0 0 30px;
       color: var(--muted);
       text-align: center;
     }
 
-    /* Reception / keypad / name-selection shared visual baseline */
-    #reception-panel,
+    /* Keypad / name-selection shared visual baseline */
     #keypad-panel,
     #name-select-panel,
     #admin-panel {
       padding-top: 40px;
     }
 
-    #reception-panel {
-      container-type: inline-size;
-    }
-
-    #reception-panel h1,
     #keypad-panel h1,
     #name-select-panel h1,
     #admin-panel > h1 {
@@ -143,7 +124,6 @@
 
     #name-select-instruction:empty { display: none; }
 
-    #reception-panel .reception-clock,
     #keypad-panel .lead,
     #name-select-panel .lead {
       min-height: 1.8em;
@@ -151,10 +131,6 @@
       margin-bottom: 24px;
       font-size: 1.05rem;
       line-height: 1.5;
-    }
-
-    #reception-panel .reception-clock {
-      font-size: clamp(0.75rem, 5.8cqw, 2.4rem);
     }
 
     #keypad-panel .lead,
@@ -295,19 +271,6 @@
 
     .form-button--secondary:hover,
     .form-button--secondary:focus-visible { background: var(--primary-soft); }
-
-    .reception-action {
-      min-height: 72px;
-      font-size: 1.3rem;
-    }
-
-    #open-name-selection {
-      display: block;
-      width: min(620px, 100%);
-      margin-left: auto;
-      margin-right: auto;
-      align-self: center;
-    }
 
     .message {
       margin: 20px 0 0;
@@ -796,17 +759,6 @@
     <p id="app-error" class="message" role="alert" hidden></p>
   </div>
   <main inert>
-    <section id="reception-panel" class="panel" aria-labelledby="reception-title">
-      <h1 id="reception-title">教会受付</h1>
-      <p class="reception-clock" aria-label="現在の日付と時刻">
-        <span id="current-date"></span>
-        <time id="current-time"></time>
-      </p>
-
-      <button id="open-name-selection" class="form-button reception-action" type="button">名前から受付</button>
-    </section>
-
-
     <section id="keypad-panel" class="panel" aria-labelledby="keypad-title" hidden>
       <h1 id="keypad-title">管理番号</h1>
       <p id="keypad-hint" class="lead"></p>
@@ -849,8 +801,6 @@
       <h1 id="admin-title">来会状況</h1>
       <button id="open-role-admin" class="nav-button" type="button" hidden>役職管理</button>
       <section aria-label="受付利用者管理">
-        <button type="button" class="nav-button" data-access-tab="allowed" aria-pressed="true">受付許可</button>
-        <button type="button" class="nav-button" data-access-tab="unallowed" aria-pressed="false">未許可</button>
         <div id="access-admin-list"></div>
       </section>
       <div class="admin-controls">
@@ -999,14 +949,7 @@
       weekday: "short",
       timeZone: "Asia/Tokyo"
     });
-    const TIME_FORMATTER = new Intl.DateTimeFormat("ja-JP", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hourCycle: "h23",
-      timeZone: "Asia/Tokyo"
-    });
     const panels = {
-      reception: document.getElementById("reception-panel"),
       keypad: document.getElementById("keypad-panel"),
       nameSelect: document.getElementById("name-select-panel"),
       completion: document.getElementById("completion-panel"),
@@ -1015,7 +958,6 @@
     };
 
     const screenSwitch = document.getElementById("screen-switch");
-    const openNameSelection = document.getElementById("open-name-selection");
     const nameSelectTitle = document.getElementById("name-select-title");
     const nameSelectTitleText = nameSelectTitle.querySelector("span");
     const familySelectionButton = document.getElementById("family-selection-button");
@@ -1030,8 +972,6 @@
     const keypadConfirm = document.getElementById("keypad-confirm");
     const keypadBack = document.getElementById("keypad-back");
     const completionName = document.getElementById("completion-name");
-    const currentDate = document.getElementById("current-date");
-    const currentTime = document.getElementById("current-time");
     const historyDate = document.getElementById("history-date");
     const attendanceCount = document.getElementById("attendance-count");
     const memberAttendanceCount = document.getElementById("member-attendance-count");
@@ -1091,12 +1031,8 @@
       return Object.fromEntries(ROSTER.map((person) => [person.id, person.role]));
     }
 
-    function updateClock() {
-      const now = new Date();
-      currentDate.textContent = DATE_FORMATTER.format(now);
-      currentTime.textContent = TIME_FORMATTER.format(now);
-      currentTime.dateTime = now.toISOString();
-      const today = localDateKey(now);
+    function updateDateLimits() {
+      const today = localDateKey(new Date());
       historyDate.max = today;
       periodStart.max = today;
       periodEnd.max = today;
@@ -1270,12 +1206,6 @@
       renderNameCandidates();
     }
 
-    function openNameSelector() {
-      if (!receptionReady || operationPending) return;
-      renderNameRows();
-      showScreen("nameSelect");
-    }
-
     function showScreen(name) {
       if (name !== "reception" && !authReady) name = "reception";
       const receptionHomeRequested = name === "reception";
@@ -1329,7 +1259,6 @@
       } else if (name === "reception") {
         adminAuthorized = false;
         selectedPerson = null;
-        openNameSelection.focus({ preventScroll: true });
       } else if (name === "completion") {
         completionTimer = setTimeout(() => showScreen("reception"), 2000);
       }
@@ -1546,8 +1475,6 @@
       showExportMessage("CSVを出力しました");
     }
 
-    openNameSelection.addEventListener("click", openNameSelector);
-
     nameSelectBack.addEventListener("click", () => {
       if (nameSelectionStage === "candidates") {
         const availableCharacters = selectedKanaRow?.characters.filter((character) =>
@@ -1647,7 +1574,6 @@
       operationPending = value;
       document.querySelector("main").inert = value || !authReady;
       screenSwitch.disabled = value || !authReady;
-      openNameSelection.disabled = value || !receptionReady;
       logoutButton.disabled = value;
     }
     function renderFromCache() {
@@ -1718,38 +1644,32 @@
       finally { setOperationPending(false); if (currentScreen === "roleAdmin") renderRoleAdmin(); }
     });
 
-    let accessTab = "allowed";
     function renderAccessAdmin() {
       const list = document.getElementById("access-admin-list");
       list.replaceChildren();
       if (!adminAuthorized) return;
       const accounts = new Map(sync.accounts().map(row => [String(row.member_id), row.login_email]));
       SORTED_ROSTER.filter(person => ["pastor", "officer"].includes(person.role))
-        .filter(person => accounts.has(person.id) === (accessTab === "allowed"))
         .forEach(person => {
+          const allowed = accounts.has(person.id);
           const row = document.createElement("div"); row.className = "role-admin-row access-admin-row";
           const label = document.createElement("span"); label.textContent = person.name;
           const input = document.createElement("input"); input.type = "email";
           input.setAttribute("aria-label", `${person.name}のGoogleメール`);
-          input.value = accounts.get(person.id) || ""; input.disabled = accessTab === "allowed";
+          input.value = accounts.get(person.id) || ""; input.disabled = allowed;
           const button = document.createElement("button"); button.type = "button"; button.className = "nav-button";
-          button.textContent = accessTab === "allowed" ? "許可を解除" : "メールを登録して許可";
+          button.textContent = allowed ? "許可を解除" : "メールを登録して許可";
           button.addEventListener("click", async () => {
             if (operationPending || !adminAuthorized) return;
-            if (accessTab !== "allowed" && (!input.value.trim() || !input.reportValidity())) return;
+            if (!allowed && (!input.value.trim() || !input.reportValidity())) return;
             setOperationPending(true); clearAppError();
-            try { await sync.setAccess(Number(person.id), accessTab === "allowed" ? null : input.value.trim()); }
+            try { await sync.setAccess(Number(person.id), allowed ? null : input.value.trim()); }
             catch (error) { showAppError(error); }
             finally { setOperationPending(false); renderAccessAdmin(); }
           });
           row.append(label, button, input); list.append(row);
         });
     }
-    document.querySelectorAll("[data-access-tab]").forEach(button => button.addEventListener("click", () => {
-      accessTab = button.dataset.accessTab;
-      document.querySelectorAll("[data-access-tab]").forEach(item => item.setAttribute("aria-pressed", String(item === button)));
-      renderAccessAdmin();
-    }));
 
     const sync = (() => {
       let client = null, epoch = 0, channel = null, retryTimer = null, day = "";
@@ -1960,6 +1880,7 @@
         if (!authReady || operationPending || refreshing) return;
         refreshing = true;
         try {
+          updateDateLimits();
           if (day !== localDateKey(new Date())) { await start(); return; }
           const allowed = await rpc("reception_status");
           if (allowed !== receptionReady && !adminAuthorized) { await start(); return; }
@@ -2039,9 +1960,8 @@
     window.addEventListener("pageshow", (event) => { if (event.persisted) void sync.start(); });
 
 
-    updateClock();
+    updateDateLimits();
     historyDate.value = localDateKey(new Date());
-    setInterval(updateClock, 1000);
     sync.start();
   </script>
 </body>
