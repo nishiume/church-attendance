@@ -799,7 +799,7 @@
 
     <section id="admin-panel" class="panel panel--wide" aria-labelledby="admin-title" hidden>
       <h1 id="admin-title">来会状況</h1>
-      <button id="open-role-admin" class="nav-button" type="button" hidden>役職管理</button>
+      <button id="open-role-admin" class="nav-button" type="button" hidden>名簿管理</button>
       <section aria-label="受付利用者管理">
         <div id="access-admin-list"></div>
       </section>
@@ -881,14 +881,10 @@
       </section>
     </section>
     <section id="role-admin-panel" class="panel" aria-labelledby="role-admin-title" hidden>
-      <h1 id="role-admin-title">役職管理</h1>
+      <h1 id="role-admin-title">名簿管理</h1>
       <form id="member-add-form" class="member-add-form" novalidate>
         <h2>新しい人を追加</h2>
         <div class="member-detail-fields">
-          <div>
-            <label for="member-add-id">受付番号</label>
-            <input id="member-add-id" type="number" min="0" step="1" inputmode="numeric" required>
-          </div>
           <div>
             <label for="member-add-name">氏名</label>
             <input id="member-add-name" type="text" autocomplete="off" required>
@@ -989,7 +985,6 @@
     const periodCategory = document.getElementById("period-category");
     const exportMessage = document.getElementById("export-message");
     const memberAddForm = document.getElementById("member-add-form");
-    const memberAddId = document.getElementById("member-add-id");
     const memberAddName = document.getElementById("member-add-name");
     const memberAddKana = document.getElementById("member-add-kana");
     const memberAddRole = document.getElementById("member-add-role");
@@ -1563,7 +1558,8 @@
         reception_denied: "受付資格を確認できません。",
         invalid_email: "Googleメールを確認してください。",
         email_in_use: "このメールは登録済みです。",
-        invalid_member_data: "受付番号・氏名・かなを確認してください。",
+        invalid_member_data: "氏名・かな・区分を確認してください。",
+        member_id_unavailable: "受付番号を自動決定できません。名簿を確認してください。",
         member_id_in_use: "この受付番号はすでに使われています。",
         not_ready: "接続の完了後に操作してください。"
       };
@@ -1594,10 +1590,10 @@
         const row = document.createElement("div");
         row.className = "role-admin-row";
         const name = document.createElement("span");
-        name.textContent = `${person.id} ${person.name}`;
+        name.textContent = person.name;
         const select = document.createElement("select");
         select.className = "role-select";
-        select.setAttribute("aria-label", `${person.name}の役職`);
+        select.setAttribute("aria-label", `${person.name}の区分`);
         ROLE_OPTIONS.forEach((role) => {
           const option = document.createElement("option");
           option.value = role.value; option.textContent = role.label;
@@ -1626,12 +1622,21 @@
     memberAddForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       if (!authReady || !adminAuthorized || operationPending || !masterCode) return;
-      const memberId = memberAddId.valueAsNumber;
       const name = memberAddName.value.trim();
       const familyKana = memberAddKana.value.trim();
       const role = memberAddRole.value;
-      if (!Number.isInteger(memberId) || memberId < 0 || !name || !familyKana || !ROLE_OPTIONS.some(option => option.value === role)) {
+      if (!name || !familyKana || !ROLE_OPTIONS.some(option => option.value === role)) {
         showAppError(new Error("invalid_member_data"));
+        return;
+      }
+      const memberIds = ROSTER.map((person) => Number(person.id));
+      if (memberIds.length === 0 || memberIds.some((id) => !Number.isSafeInteger(id) || id < 0)) {
+        showAppError(new Error("member_id_unavailable"));
+        return;
+      }
+      const memberId = Math.max(...memberIds) + 1;
+      if (!Number.isSafeInteger(memberId)) {
+        showAppError(new Error("member_id_unavailable"));
         return;
       }
       setOperationPending(true); clearAppError(); memberAddMessage.hidden = true;
