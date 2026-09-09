@@ -764,11 +764,15 @@
     #sync-status { margin: 0; text-align: center; }
     .role-admin-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
     .role-admin-row span { flex: 1; min-width: 160px; }
-    .access-admin-row > span { flex: 0 1 auto; min-width: 0; font-weight: 700; }
-    .access-admin-row > input { flex: 1 1 260px; }
+    .access-admin-row > .access-admin-name { flex: 0 1 auto; min-width: 140px; font-weight: 700; }
+    .access-admin-row > .access-admin-email { flex: 1 1 260px; min-width: 220px; overflow-wrap: anywhere; }
     .access-admin-row > .role-select { flex: 0 0 8em; }
     .member-add-form { margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--line); }
     .member-add-form .role-select { width: 100%; height: 60px; }
+    .access-register-form { margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--line); }
+    .access-register-form select { width: 100%; height: 60px; min-height: 60px; }
+    .access-register-form input { width: 100%; height: 60px; min-height: 60px; }
+    .access-list-title { margin: 0 0 8px; }
   </style>
 </head>
 <body>
@@ -933,12 +937,46 @@
         <button class="form-button" type="submit">名簿に追加</button>
         <p id="member-add-message" class="export-message" role="status" hidden></p>
       </form>
+      <div class="admin-controls" aria-label="名簿表示">
+        <div class="admin-control">
+          <label for="role-admin-filter">表示する区分</label>
+          <select id="role-admin-filter">
+            <option value="all">全員</option>
+            <option value="pastor">牧師</option>
+            <option value="officer">役員</option>
+            <option value="member">教会員</option>
+            <option value="guest">ゲスト</option>
+          </select>
+        </div>
+      </div>
       <div id="role-admin-list"></div>
     </section>
 
     <section id="access-admin-panel" class="panel" aria-labelledby="access-admin-title" hidden>
       <h1 id="access-admin-title">受付許可</h1>
       <button id="access-admin-back" class="action-button action-button--secondary management-back" type="button">管理画面へ戻る</button>
+      <form id="access-register-form" class="access-register-form" novalidate>
+        <h2>新しく受付担当者を登録</h2>
+        <div class="member-detail-fields">
+          <div>
+            <label for="access-person-search">人物を検索</label>
+            <input id="access-person-search" type="search" autocomplete="off">
+          </div>
+          <div>
+            <label for="access-person-select">対象者</label>
+            <select id="access-person-select" required>
+              <option value="">人物を選択してください</option>
+            </select>
+          </div>
+          <div>
+            <label for="access-email">Googleメール</label>
+            <input id="access-email" type="email" autocomplete="off" required>
+          </div>
+        </div>
+        <button class="form-button" type="submit">登録</button>
+        <p id="access-register-message" class="export-message" role="status" hidden></p>
+      </form>
+      <h2 class="access-list-title">登録済み受付担当者</h2>
       <div id="access-admin-list"></div>
     </section>
   </main>
@@ -1023,6 +1061,12 @@
     const memberAddKana = document.getElementById("member-add-kana");
     const memberAddRole = document.getElementById("member-add-role");
     const memberAddMessage = document.getElementById("member-add-message");
+    const roleAdminFilter = document.getElementById("role-admin-filter");
+    const accessRegisterForm = document.getElementById("access-register-form");
+    const accessPersonSearch = document.getElementById("access-person-search");
+    const accessPersonSelect = document.getElementById("access-person-select");
+    const accessEmail = document.getElementById("access-email");
+    const accessRegisterMessage = document.getElementById("access-register-message");
 
     let selectedPerson = null;
     let currentScreen = "reception";
@@ -1622,7 +1666,11 @@
       if (!adminAuthorized || !masterCode) return;
       const list = document.getElementById("role-admin-list");
       list.replaceChildren();
-      SORTED_ROSTER.forEach((person) => {
+      const selectedRole = roleAdminFilter.value;
+      const displayedRoster = selectedRole === "all"
+        ? SORTED_ROSTER
+        : SORTED_ROSTER.filter((person) => person.role === selectedRole);
+      displayedRoster.forEach((person) => {
         const row = document.createElement("div");
         row.className = "role-admin-row";
         const name = document.createElement("span");
@@ -1648,6 +1696,8 @@
         row.append(name, select); list.append(row);
       });
     }
+    roleAdminFilter.addEventListener("change", renderRoleAdmin);
+
     adminMenu.addEventListener("change", () => {
       if (!authReady || !adminAuthorized || operationPending || !masterCode) {
         adminMenu.value = "";
@@ -1659,6 +1709,7 @@
         memberAddMessage.hidden = true;
         showScreen("roleAdmin");
       } else if (destination === "accessAdmin") {
+        accessRegisterMessage.hidden = true;
         showScreen("accessAdmin");
       }
     });
@@ -1694,44 +1745,96 @@
       finally { setOperationPending(false); if (currentScreen === "roleAdmin") renderRoleAdmin(); }
     });
 
+    function accessAccountsByMember() {
+      return new Map(sync.accounts().map((account) => [String(account.member_id), account]));
+    }
+
+    function renderAccessCandidates() {
+      const accounts = accessAccountsByMember();
+      const query = accessPersonSearch.value.trim().toLocaleLowerCase("ja");
+      const previous = accessPersonSelect.value;
+      const candidates = SORTED_ROSTER
+        .filter((person) => !accounts.has(person.id))
+        .filter((person) => !query || person.name.toLocaleLowerCase("ja").includes(query) || person.familyKana.toLocaleLowerCase("ja").includes(query));
+
+      accessPersonSelect.replaceChildren();
+      const placeholder = document.createElement("option");
+      placeholder.value = "";
+      placeholder.textContent = candidates.length ? "人物を選択してください" : "該当する未登録者はいません";
+      accessPersonSelect.append(placeholder);
+      candidates.forEach((person) => {
+        const option = document.createElement("option");
+        option.value = person.id;
+        option.textContent = person.name;
+        accessPersonSelect.append(option);
+      });
+      accessPersonSelect.disabled = candidates.length === 0;
+      if (candidates.some((person) => person.id === previous)) accessPersonSelect.value = previous;
+    }
+
     function renderAccessAdmin() {
       const list = document.getElementById("access-admin-list");
       list.replaceChildren();
       if (!adminAuthorized) return;
-      const accounts = new Map(sync.accounts().map(row => [String(row.member_id), row.login_email]));
-      SORTED_ROSTER.filter(person => ["pastor", "officer"].includes(person.role))
-        .forEach(person => {
-          const allowed = accounts.has(person.id);
-          const row = document.createElement("div"); row.className = "role-admin-row access-admin-row";
-          const label = document.createElement("span"); label.textContent = person.name;
-          const input = document.createElement("input"); input.type = "email";
-          input.setAttribute("aria-label", `${person.name}のGoogleメール`);
-          input.value = accounts.get(person.id) || ""; input.disabled = allowed;
-          const state = document.createElement("select");
-          state.className = "role-select";
-          state.setAttribute("aria-label", `${person.name}の受付権限`);
-          const allowedOption = document.createElement("option");
-          allowedOption.value = "allowed"; allowedOption.textContent = "許可";
-          const deniedOption = document.createElement("option");
-          deniedOption.value = "denied"; deniedOption.textContent = "不許可";
-          state.append(allowedOption, deniedOption);
-          state.value = allowed ? "allowed" : "denied";
-          state.addEventListener("change", async () => {
-            if (operationPending || !adminAuthorized) { renderAccessAdmin(); return; }
-            const nextAllowed = state.value === "allowed";
-            if (nextAllowed === allowed) return;
-            if (nextAllowed && (!input.value.trim() || !input.reportValidity())) {
-              state.value = "denied";
-              return;
-            }
-            setOperationPending(true); clearAppError();
-            try { await sync.setAccess(Number(person.id), nextAllowed ? input.value.trim() : null); }
-            catch (error) { showAppError(error); }
-            finally { setOperationPending(false); renderAccessAdmin(); }
-          });
-          row.append(label, input, state); list.append(row);
+
+      renderAccessCandidates();
+      const accounts = accessAccountsByMember();
+      SORTED_ROSTER.filter((person) => accounts.has(person.id)).forEach((person) => {
+        const account = accounts.get(person.id);
+        const allowed = account.allowed === true;
+        const row = document.createElement("div");
+        row.className = "role-admin-row access-admin-row";
+        const name = document.createElement("span");
+        name.className = "access-admin-name";
+        name.textContent = person.name;
+        const email = document.createElement("span");
+        email.className = "access-admin-email";
+        email.textContent = account.login_email;
+        const state = document.createElement("select");
+        state.className = "role-select";
+        state.setAttribute("aria-label", `${person.name}の受付権限`);
+        const allowedOption = document.createElement("option");
+        allowedOption.value = "allowed"; allowedOption.textContent = "許可";
+        const deniedOption = document.createElement("option");
+        deniedOption.value = "denied"; deniedOption.textContent = "不許可";
+        state.append(allowedOption, deniedOption);
+        state.value = allowed ? "allowed" : "denied";
+        state.addEventListener("change", async () => {
+          if (operationPending || !adminAuthorized) { renderAccessAdmin(); return; }
+          const nextAllowed = state.value === "allowed";
+          if (nextAllowed === allowed) return;
+          setOperationPending(true); clearAppError();
+          try { await sync.setAccess(Number(person.id), nextAllowed ? account.login_email : null); }
+          catch (error) { showAppError(error); }
+          finally { setOperationPending(false); if (currentScreen === "accessAdmin") renderAccessAdmin(); }
         });
+        row.append(name, email, state);
+        list.append(row);
+      });
     }
+
+    accessPersonSearch.addEventListener("input", renderAccessCandidates);
+    accessRegisterForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (!authReady || !adminAuthorized || operationPending || !masterCode) return;
+      const memberId = accessPersonSelect.value;
+      const email = accessEmail.value.trim();
+      const accounts = accessAccountsByMember();
+      if (!memberId || accounts.has(memberId) || !accessEmail.reportValidity()) return;
+      if (!ROSTER.some((person) => person.id === memberId)) {
+        showAppError(new Error("invalid_member"));
+        return;
+      }
+      setOperationPending(true); clearAppError(); accessRegisterMessage.hidden = true;
+      try {
+        await sync.setAccess(Number(memberId), email);
+        const person = ROSTER.find((candidate) => candidate.id === memberId);
+        accessRegisterForm.reset();
+        accessRegisterMessage.textContent = `${person.name}さんを受付担当者として登録しました。`;
+        accessRegisterMessage.hidden = false;
+      } catch (error) { showAppError(error); }
+      finally { setOperationPending(false); if (currentScreen === "accessAdmin") renderAccessAdmin(); }
+    });
 
     const sync = (() => {
       let client = null, epoch = 0, channel = null, retryTimer = null, day = "";
@@ -1760,6 +1863,7 @@
         selectedMemberDetail = null; memberDetail.hidden = true;
         attendanceList.replaceChildren(); document.getElementById("access-admin-list").replaceChildren();
         document.getElementById("role-admin-list").replaceChildren();
+        accessRegisterForm.reset(); accessRegisterMessage.hidden = true;
         if (!receptionReady) { memberCache = []; attendanceCache.clear(); }
         renderFromCache();
       }
@@ -1986,8 +2090,8 @@
           await loadAdmin();
         },
         async setAccess(id, email) {
-          await writeRpc(email === null ? "remove_access_account" : "set_access_account", {
-            p_master_code: masterCode, p_member_id: id, ...(email === null ? {} : { p_login_email: email })
+          await writeRpc("set_access_account", {
+            p_master_code: masterCode, p_member_id: id, p_login_email: email
           });
           await loadAdmin();
         },
