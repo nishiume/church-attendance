@@ -1793,6 +1793,7 @@
     let masterCode = "";
     let operationPending = false;
     const appError = document.getElementById("app-error");
+    const connectionControls = document.getElementById("connection-controls");
     const loginButton = document.getElementById("google-login");
     const logoutButton = document.getElementById("google-logout");
     let authReady = false;
@@ -1951,6 +1952,7 @@
       const current = token => token === epoch;
       function status(message) {
         syncStatus.textContent = message;
+        connectionControls.hidden = authReady;
         loginButton.hidden = authReady;
         logoutButton.hidden = !authReady;
         retryButton.hidden = !authReady;
