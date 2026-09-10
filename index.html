@@ -69,30 +69,6 @@
     .nav-button:hover,
     .nav-button:focus-visible { border-color: var(--primary); }
 
-    .management-menu {
-      display: block;
-      width: min(280px, 100%);
-      min-height: 48px;
-      margin: 14px auto 18px;
-      padding: 8px 12px;
-      border: 1px solid #aeb8b1;
-      border-radius: 10px;
-      background: #fff;
-      color: var(--text);
-      font-weight: 700;
-    }
-
-    .management-menu:focus {
-      border-color: var(--primary);
-      outline: 3px solid rgba(36, 93, 168, 0.16);
-    }
-
-    .management-back {
-      display: block;
-      width: min(620px, 100%);
-      margin: 14px auto 24px;
-    }
-
     main {
       width: min(920px, calc(100% - 32px - env(safe-area-inset-left) - env(safe-area-inset-right)));
       margin: 0 auto;
@@ -122,21 +98,42 @@
       text-align: center;
     }
 
+    .reception-clock {
+      display: flex;
+      justify-content: center;
+      gap: 0.5em;
+      flex-wrap: nowrap;
+      margin: 14px 0 8px;
+      color: var(--primary-dark);
+      font-size: clamp(0.75rem, 5.8cqw, 2rem);
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
     .lead {
       margin: 0 0 30px;
       color: var(--muted);
       text-align: center;
     }
 
-    /* Keypad / name-selection shared visual baseline */
+    /* Reception / keypad / name-selection shared visual baseline */
+    #reception-panel,
     #keypad-panel,
     #name-select-panel,
+    #admin-login-panel,
     #admin-panel {
       padding-top: 40px;
     }
 
+    #reception-panel {
+      container-type: inline-size;
+    }
+
+    #reception-panel h1,
     #keypad-panel h1,
     #name-select-panel h1,
+    #admin-login-panel h1,
     #admin-panel > h1 {
       width: min(620px, 100%);
       margin: 0 auto 10px;
@@ -146,8 +143,7 @@
       text-align: center;
     }
 
-    #name-select-instruction:empty { display: none; }
-
+    #reception-panel .reception-clock,
     #keypad-panel .lead,
     #name-select-panel .lead {
       min-height: 1.8em;
@@ -155,6 +151,10 @@
       margin-bottom: 24px;
       font-size: 1.05rem;
       line-height: 1.5;
+    }
+
+    #reception-panel .reception-clock {
+      font-size: clamp(0.75rem, 5.8cqw, 2.4rem);
     }
 
     #keypad-panel .lead,
@@ -296,6 +296,41 @@
     .form-button--secondary:hover,
     .form-button--secondary:focus-visible { background: var(--primary-soft); }
 
+    .reception-action {
+      min-height: 72px;
+      font-size: 1.3rem;
+    }
+
+    #open-name-selection,
+    #admin-number {
+      display: block;
+      width: min(620px, 100%);
+      margin-left: auto;
+      margin-right: auto;
+      align-self: center;
+    }
+
+    #admin-login-panel #admin-number {
+      width: min(527px, 85%);
+    }
+
+    #admin-login-panel {
+      padding-top: 20px;
+    }
+
+    #admin-login-panel h1 {
+      margin-bottom: 8px;
+    }
+
+    #admin-login-panel #admin-number {
+      margin-top: 8px;
+    }
+
+
+    #admin-number {
+      margin: 14px auto 0;
+    }
+
     .message {
       margin: 20px 0 0;
       padding: 12px 14px;
@@ -367,29 +402,28 @@
 
     .name-select-heading {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
       align-items: center;
-      gap: 12px;
+      gap: 8px;
       text-align: center;
     }
 
     .name-select-heading > span {
-      grid-column: 1;
+      grid-column: 2;
       min-width: 0;
     }
 
     .family-selection-button {
-      grid-column: 2;
+      grid-column: 3;
       justify-self: end;
-      min-height: 52px;
-      padding: 9px 16px;
+      min-height: 44px;
+      padding: 7px 13px;
       border: 1px solid var(--primary);
       border-radius: 9px;
       background: var(--primary-soft);
       color: var(--primary-dark);
-      font-size: 1rem;
+      font-size: 0.95rem;
       font-weight: 800;
-      white-space: nowrap;
     }
 
     .family-selection-button:hover,
@@ -405,10 +439,15 @@
 
     .name-selection-back { margin-top: 20px; }
 
+    .confirmation-name,
     .completion-name {
       margin: 28px 0;
       font-weight: 800;
       text-align: center;
+    }
+
+    .confirmation-name {
+      font-size: clamp(1.55rem, 6vw, 2.3rem);
     }
 
     .completion-member-row {
@@ -419,7 +458,16 @@
       text-align: center;
     }
 
+    .confirmation-question {
+      display: block;
+      margin-top: 8px;
+    }
 
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
 
     .keypad-display {
       display: flex;
@@ -520,7 +568,7 @@
 
     .admin-controls {
       display: grid;
-      grid-template-columns: 1fr;
+      grid-template-columns: 1fr 1fr;
       gap: 16px;
       width: min(822px, 100%);
       margin: 18px auto 0;
@@ -557,6 +605,21 @@
       min-height: 60px;
     }
 
+    .admin-checkin-button {
+      margin: 0 auto;
+      min-height: 34px;
+      padding: 4px 7px;
+      border: 1px solid var(--primary);
+      border-radius: 7px;
+      background: var(--primary);
+      color: #fff;
+      font-size: 0.78rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .admin-checkin-button:hover,
+    .admin-checkin-button:focus-visible { background: var(--primary-dark); }
 
     .count-label {
       display: block;
@@ -620,6 +683,7 @@
     }
 
     .status--arrived { color: var(--primary); }
+    .status--waiting { color: var(--muted); }
 
     .member-name-button {
       width: 100%;
@@ -742,6 +806,7 @@
 
     @media (max-width: 560px) {
       .panel { padding: 24px 20px; }
+      .actions { grid-template-columns: 1fr; }
       .period-fields { grid-template-columns: 1fr; }
       .member-detail-fields { grid-template-columns: 1fr; }
       .admin-controls { grid-template-columns: 1fr; }
@@ -764,15 +829,8 @@
     #sync-status { margin: 0; text-align: center; }
     .role-admin-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
     .role-admin-row span { flex: 1; min-width: 160px; }
-    .access-admin-row > .access-admin-name { flex: 0 1 auto; min-width: 140px; font-weight: 700; }
-    .access-admin-row > .access-admin-email { flex: 1 1 260px; min-width: 220px; overflow-wrap: anywhere; }
-    .access-admin-row > .role-select { flex: 0 0 8em; }
     .member-add-form { margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--line); }
     .member-add-form .role-select { width: 100%; height: 60px; }
-    .access-register-form { margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--line); }
-    .access-register-form select { width: 100%; height: 60px; min-height: 60px; }
-    .access-register-form input { width: 100%; height: 60px; min-height: 60px; }
-    .access-list-title { margin: 0 0 8px; }
   </style>
 </head>
 <body>
@@ -788,6 +846,22 @@
     <p id="app-error" class="message" role="alert" hidden></p>
   </div>
   <main inert>
+    <section id="reception-panel" class="panel" aria-labelledby="reception-title">
+      <h1 id="reception-title">教会受付</h1>
+      <p class="reception-clock" aria-label="現在の日付と時刻">
+        <span id="current-date"></span>
+        <time id="current-time"></time>
+      </p>
+
+      <button id="open-name-selection" class="form-button reception-action" type="button">名前から受付</button>
+    </section>
+
+    <section id="admin-login-panel" class="panel" aria-labelledby="admin-login-title" hidden>
+      <h1 id="admin-login-title">管理画面</h1>
+      <button id="admin-number" class="form-button reception-action" type="button">番号を入力する</button>
+      <p id="admin-number-message" class="message" role="alert" hidden></p>
+    </section>
+
     <section id="keypad-panel" class="panel" aria-labelledby="keypad-title" hidden>
       <h1 id="keypad-title">管理番号</h1>
       <p id="keypad-hint" class="lead"></p>
@@ -820,6 +894,17 @@
       <button id="name-select-back" class="action-button action-button--secondary name-selection-back" type="button">戻る</button>
     </section>
 
+    <section id="confirmation-panel" class="panel" aria-labelledby="confirmation-title" hidden>
+      <h1 id="confirmation-title">本人確認</h1>
+      <p class="confirmation-name">
+        <span id="confirmation-name"></span>
+        <span class="confirmation-question">ですか？</span>
+      </p>
+      <div class="actions">
+        <button id="confirm-ok" class="action-button action-button--primary" type="button">OK</button>
+        <button id="confirm-no" class="action-button action-button--secondary" type="button">NO</button>
+      </div>
+    </section>
 
     <section id="completion-panel" class="panel" aria-labelledby="completion-title" hidden>
       <h1 id="completion-title">受付が完了しました</h1>
@@ -828,15 +913,23 @@
 
     <section id="admin-panel" class="panel panel--wide" aria-labelledby="admin-title" hidden>
       <h1 id="admin-title">来会状況</h1>
-      <select id="admin-menu" class="management-menu" aria-label="管理メニュー" hidden>
-        <option value="">管理メニュー</option>
-        <option value="roleAdmin">名簿管理</option>
-        <option value="accessAdmin">受付許可</option>
-      </select>
+      <button id="open-role-admin" class="nav-button" type="button" hidden>役職管理</button>
+      <section aria-label="受付利用者管理">
+        <button type="button" class="nav-button" data-access-tab="allowed" aria-pressed="true">受付許可</button>
+        <button type="button" class="nav-button" data-access-tab="unallowed" aria-pressed="false">未許可</button>
+        <div id="access-admin-list"></div>
+      </section>
       <div class="admin-controls">
         <div class="admin-control">
           <label for="history-date">表示する日付</label>
           <input id="history-date" type="date">
+        </div>
+        <div class="admin-control">
+          <label for="admin-sort">並び順</label>
+          <select id="admin-sort">
+            <option value="kana">50音順</option>
+            <option value="number">番号順</option>
+          </select>
         </div>
       </div>
       <div class="count-cards" aria-live="polite">
@@ -853,6 +946,7 @@
           <strong id="guest-attendance-count" class="count-value">0人</strong>
         </div>
       </div>
+      <p id="admin-action-message" class="export-message" role="status" hidden></p>
       <div class="table-wrap">
         <table>
           <thead>
@@ -911,11 +1005,14 @@
       </section>
     </section>
     <section id="role-admin-panel" class="panel" aria-labelledby="role-admin-title" hidden>
-      <h1 id="role-admin-title">名簿管理</h1>
-      <button id="role-admin-back" class="action-button action-button--secondary management-back" type="button">管理画面へ戻る</button>
+      <h1 id="role-admin-title">役職管理</h1>
       <form id="member-add-form" class="member-add-form" novalidate>
         <h2>新しい人を追加</h2>
         <div class="member-detail-fields">
+          <div>
+            <label for="member-add-id">受付番号</label>
+            <input id="member-add-id" type="number" min="0" step="1" inputmode="numeric" required>
+          </div>
           <div>
             <label for="member-add-name">氏名</label>
             <input id="member-add-name" type="text" autocomplete="off" required>
@@ -937,47 +1034,8 @@
         <button class="form-button" type="submit">名簿に追加</button>
         <p id="member-add-message" class="export-message" role="status" hidden></p>
       </form>
-      <div class="admin-controls" aria-label="名簿表示">
-        <div class="admin-control">
-          <label for="role-admin-filter">表示する区分</label>
-          <select id="role-admin-filter">
-            <option value="all">全員</option>
-            <option value="pastor">牧師</option>
-            <option value="officer">役員</option>
-            <option value="member">教会員</option>
-            <option value="guest">ゲスト</option>
-          </select>
-        </div>
-      </div>
       <div id="role-admin-list"></div>
-    </section>
-
-    <section id="access-admin-panel" class="panel" aria-labelledby="access-admin-title" hidden>
-      <h1 id="access-admin-title">受付許可</h1>
-      <button id="access-admin-back" class="action-button action-button--secondary management-back" type="button">管理画面へ戻る</button>
-      <form id="access-register-form" class="access-register-form" novalidate>
-        <h2>新しく受付担当者を登録</h2>
-        <div class="member-detail-fields">
-          <div>
-            <label for="access-person-search">人物を検索</label>
-            <input id="access-person-search" type="search" autocomplete="off">
-          </div>
-          <div>
-            <label for="access-person-select">対象者</label>
-            <select id="access-person-select" required>
-              <option value="">人物を選択してください</option>
-            </select>
-          </div>
-          <div>
-            <label for="access-email">Googleメール</label>
-            <input id="access-email" type="email" autocomplete="off" required>
-          </div>
-        </div>
-        <button class="form-button" type="submit">登録</button>
-        <p id="access-register-message" class="export-message" role="status" hidden></p>
-      </form>
-      <h2 class="access-list-title">登録済み受付担当者</h2>
-      <div id="access-admin-list"></div>
+      <button id="role-admin-back" class="action-button action-button--secondary" type="button">管理画面へ戻る</button>
     </section>
   </main>
 
@@ -1015,17 +1073,25 @@
       weekday: "short",
       timeZone: "Asia/Tokyo"
     });
+    const TIME_FORMATTER = new Intl.DateTimeFormat("ja-JP", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+      timeZone: "Asia/Tokyo"
+    });
     const panels = {
+      reception: document.getElementById("reception-panel"),
+      adminLogin: document.getElementById("admin-login-panel"),
       keypad: document.getElementById("keypad-panel"),
       nameSelect: document.getElementById("name-select-panel"),
+      confirmation: document.getElementById("confirmation-panel"),
       completion: document.getElementById("completion-panel"),
       admin: document.getElementById("admin-panel"),
-      roleAdmin: document.getElementById("role-admin-panel"),
-      accessAdmin: document.getElementById("access-admin-panel")
+      roleAdmin: document.getElementById("role-admin-panel")
     };
 
     const screenSwitch = document.getElementById("screen-switch");
-    const adminMenu = document.getElementById("admin-menu");
+    const openNameSelection = document.getElementById("open-name-selection");
     const nameSelectTitle = document.getElementById("name-select-title");
     const nameSelectTitleText = nameSelectTitle.querySelector("span");
     const familySelectionButton = document.getElementById("family-selection-button");
@@ -1033,14 +1099,22 @@
     const nameOptions = document.getElementById("name-options");
     const nameSelectionConfirm = document.getElementById("name-selection-confirm");
     const nameSelectBack = document.getElementById("name-select-back");
+    const adminNumberInput = document.getElementById("admin-number");
+    const adminNumberMessage = document.getElementById("admin-number-message");
     const keypad = document.getElementById("keypad");
     const keypadHint = document.getElementById("keypad-hint");
     const keypadDisplay = document.getElementById("keypad-display");
     const keypadDelete = document.getElementById("keypad-delete");
     const keypadConfirm = document.getElementById("keypad-confirm");
     const keypadBack = document.getElementById("keypad-back");
+    const confirmationName = document.getElementById("confirmation-name");
+    const confirmOk = document.getElementById("confirm-ok");
+    const confirmNo = document.getElementById("confirm-no");
     const completionName = document.getElementById("completion-name");
+    const currentDate = document.getElementById("current-date");
+    const currentTime = document.getElementById("current-time");
     const historyDate = document.getElementById("history-date");
+    const adminSort = document.getElementById("admin-sort");
     const attendanceCount = document.getElementById("attendance-count");
     const memberAttendanceCount = document.getElementById("member-attendance-count");
     const guestAttendanceCount = document.getElementById("guest-attendance-count");
@@ -1051,22 +1125,18 @@
     const memberDetailEnd = document.getElementById("member-detail-end");
     const memberDetailCount = document.getElementById("member-detail-count");
     const memberDetailDates = document.getElementById("member-detail-dates");
+    const adminActionMessage = document.getElementById("admin-action-message");
     const periodExportForm = document.getElementById("period-export-form");
     const periodStart = document.getElementById("period-start");
     const periodEnd = document.getElementById("period-end");
     const periodCategory = document.getElementById("period-category");
     const exportMessage = document.getElementById("export-message");
     const memberAddForm = document.getElementById("member-add-form");
+    const memberAddId = document.getElementById("member-add-id");
     const memberAddName = document.getElementById("member-add-name");
     const memberAddKana = document.getElementById("member-add-kana");
     const memberAddRole = document.getElementById("member-add-role");
     const memberAddMessage = document.getElementById("member-add-message");
-    const roleAdminFilter = document.getElementById("role-admin-filter");
-    const accessRegisterForm = document.getElementById("access-register-form");
-    const accessPersonSearch = document.getElementById("access-person-search");
-    const accessPersonSelect = document.getElementById("access-person-select");
-    const accessEmail = document.getElementById("access-email");
-    const accessRegisterMessage = document.getElementById("access-register-message");
 
     let selectedPerson = null;
     let currentScreen = "reception";
@@ -1078,6 +1148,7 @@
     let selectedKana = "";
     let selectedPeople = [];
     let familySelectionMode = false;
+    let confirmationOrigin = "reception";
     let selectedMemberDetail = null;
 
     function localDateKey(date) {
@@ -1104,14 +1175,22 @@
       return Object.fromEntries(ROSTER.map((person) => [person.id, person.role]));
     }
 
-    function updateDateLimits() {
-      const today = localDateKey(new Date());
+    function updateClock() {
+      const now = new Date();
+      currentDate.textContent = DATE_FORMATTER.format(now);
+      currentTime.textContent = TIME_FORMATTER.format(now);
+      currentTime.dateTime = now.toISOString();
+      const today = localDateKey(now);
       historyDate.max = today;
       periodStart.max = today;
       periodEnd.max = today;
       if (!periodEnd.value) periodEnd.value = today;
     }
 
+    function clearAdminLogin() {
+      adminNumberMessage.hidden = true;
+      adminNumberMessage.textContent = "";
+    }
 
     function keypadLengthIsValid() {
       return keypadBuffer.length === 8;
@@ -1138,7 +1217,9 @@
         const authorized = await sync.verifyMaster(enteredNumber);
         if (!authReady || epoch !== sync.epoch || currentScreen !== "keypad") return;
         if (!authorized) {
-          keypadHint.textContent = "管理番号を確認できません。もう一度入力してください";
+          showScreen("adminLogin");
+          adminNumberMessage.textContent = "管理画面を表示できません";
+          adminNumberMessage.hidden = false;
           return;
         }
         masterCode = enteredNumber;
@@ -1184,7 +1265,7 @@
       selectedPeople = [];
       familySelectionMode = false;
       nameSelectTitleText.textContent = "名前から選ぶ";
-      nameSelectInstruction.textContent = "";
+      nameSelectInstruction.textContent = "名字の最初の行を選んでください";
       nameOptions.className = "name-options name-options--rows";
       nameOptions.replaceChildren();
       familySelectionButton.hidden = true;
@@ -1195,15 +1276,7 @@
       KANA_ROWS.forEach((row) => {
         nameOptions.append(createNameOption(row.label, () => {
           selectedKanaRow = row;
-          const availableCharacters = row.characters.filter((character) =>
-            ROSTER.some((person) => surnameInitial(person) === character)
-          );
-          if (availableCharacters.length === 1) {
-            selectedKana = availableCharacters[0];
-            renderNameCandidates();
-          } else {
-            renderNameCharacters();
-          }
+          renderNameCharacters();
         }));
       });
     }
@@ -1212,7 +1285,7 @@
       nameSelectionStage = "characters";
       selectedKana = "";
       nameSelectTitleText.textContent = selectedKanaRow.label;
-      nameSelectInstruction.textContent = "";
+      nameSelectInstruction.textContent = "名字の最初の文字を選んでください";
       nameOptions.className = "name-options";
       nameOptions.replaceChildren();
       familySelectionButton.hidden = true;
@@ -1239,13 +1312,14 @@
       nameOptions.className = "name-options name-options--candidates";
       nameOptions.replaceChildren();
       nameSelectBack.hidden = false;
-      const candidates = SORTED_ROSTER.filter((person) => surnameInitial(person) === selectedKana);
-      familySelectionButton.hidden = candidates.length < 2;
+      familySelectionButton.hidden = false;
       familySelectionButton.textContent = familySelectionMode ? "通常受付に戻る" : "家族で受付";
       nameSelectionConfirm.hidden = !familySelectionMode;
       nameSelectionConfirm.disabled = true;
 
-      candidates.forEach((person) => {
+      SORTED_ROSTER
+        .filter((person) => surnameInitial(person) === selectedKana)
+        .forEach((person) => {
           if (!familySelectionMode) {
             nameOptions.append(createNameOption(
               `${person.name}さん`,
@@ -1279,6 +1353,12 @@
       renderNameCandidates();
     }
 
+    function openNameSelector() {
+      if (!receptionReady || operationPending) return;
+      renderNameRows();
+      showScreen("nameSelect");
+    }
+
     function showScreen(name) {
       if (name !== "reception" && !authReady) name = "reception";
       const receptionHomeRequested = name === "reception";
@@ -1286,9 +1366,9 @@
         renderNameRows();
         name = "nameSelect";
       }
-      if ((name === "roleAdmin" || name === "accessAdmin") && (!adminAuthorized || !masterCode)) name = "keypad";
+      if (name === "roleAdmin" && (!adminAuthorized || !masterCode)) name = "adminLogin";
       if (name !== "keypad") { keypadBuffer = ""; keypadDisplay.textContent = ""; }
-      if (receptionHomeRequested) {
+      if (receptionHomeRequested || name === "adminLogin") {
         masterCode = "";
         sync.clearAdmin();
       }
@@ -1297,7 +1377,7 @@
         completionTimer = null;
       }
 
-      if (name === "admin" && !adminAuthorized) name = "keypad";
+      if (name === "admin" && !adminAuthorized) name = "adminLogin";
 
       currentScreen = name;
       document.querySelector("main").classList.toggle(
@@ -1308,19 +1388,26 @@
       Object.entries(panels).forEach(([panelName, panel]) => {
         panel.hidden = panelName !== name;
       });
-      const managementContext = name === "roleAdmin" || name === "accessAdmin" || name === "admin" || name === "keypad";
+      const managementContext = name === "roleAdmin" || name === "admin" ||
+        name === "adminLogin" ||
+        name === "keypad" ||
+        (name === "confirmation" && confirmationOrigin === "admin");
       screenSwitch.textContent = managementContext
         ? "受付画面"
         : "管理画面";
 
       if (name === "roleAdmin") {
         renderRoleAdmin();
-      } else if (name === "accessAdmin") {
-        renderAccessAdmin();
       } else if (name === "admin") {
-        adminMenu.value = "";
+        adminActionMessage.hidden = true;
+        adminActionMessage.textContent = "";
         renderAdmin();
+        renderAccessAdmin();
         document.getElementById("admin-title").focus({ preventScroll: true });
+      } else if (name === "adminLogin") {
+        adminAuthorized = false;
+        clearAdminLogin();
+        adminNumberInput.focus({ preventScroll: true });
       } else if (name === "keypad") {
         const firstDigit = keypad.querySelector("[data-digit='1']");
         if (firstDigit) firstDigit.focus({ preventScroll: true });
@@ -1334,40 +1421,74 @@
       } else if (name === "reception") {
         adminAuthorized = false;
         selectedPerson = null;
+        openNameSelection.focus({ preventScroll: true });
       } else if (name === "completion") {
         completionTimer = setTimeout(() => showScreen("reception"), 2000);
       }
     }
 
+    function selectPerson(person, origin = "reception") {
+      if (!authReady || operationPending) return;
+      selectedPerson = person;
+      selectedPeople = [person];
+      confirmationOrigin = origin;
+      confirmationName.textContent = selectedPeople.map((candidate) => `${candidate.name}さん`).join("、");
+      confirmOk.textContent = origin === "admin" ? "受付する" : "OK";
+      confirmNo.textContent = origin === "admin" ? "戻る" : "NO";
+      showScreen("confirmation");
+      confirmOk.focus({ preventScroll: true });
+    }
+
+    function selectPeople(people) {
+      if (people.length === 0) return;
+      selectedPerson = people[0];
+      selectedPeople = people;
+      confirmationOrigin = "reception";
+      confirmationName.textContent = people.map((person) => `${person.name}さん`).join("、");
+      confirmOk.textContent = "OK";
+      confirmNo.textContent = "NO";
+      showScreen("confirmation");
+      confirmOk.focus({ preventScroll: true });
+    }
 
     function registerPersonImmediately(person) {
       if (!receptionReady || operationPending) return;
       selectedPerson = person;
       selectedPeople = [person];
+      confirmationOrigin = "reception";
       registerAttendance();
     }
 
     async function registerAttendance() {
-      if (!authReady || operationPending || !selectedPerson || !receptionReady) return;
+      if (!authReady || operationPending || !selectedPerson || !(confirmationOrigin === "admin" ? adminAuthorized : receptionReady)) return;
+      const origin = confirmationOrigin;
       const people = [...(selectedPeople.length ? selectedPeople : [selectedPerson])];
       const epoch = sync.epoch;
       setOperationPending(true);
       clearAppError();
       try {
-        const results = await sync.checkIn(people.map((person) => Number(person.id)));
+        const results = await sync.checkIn(people.map((person) => Number(person.id)), origin === "admin");
         if (!authReady || epoch !== sync.epoch) return;
         const registrationResults = people.map((person) => ({
           person, alreadyRegistered: results.find((result) => String(result.member_id) === person.id).status === "already_registered"
         }));
         selectedPerson = null;
         selectedPeople = [];
-        completionName.replaceChildren(...registrationResults.map((result) => {
-          const row = document.createElement("div");
-          row.className = "completion-member-row";
-          row.textContent = `${result.person.name}さん：${result.alreadyRegistered ? "来会済みです" : "受付しました"}`;
-          return row;
-        }));
-        showScreen("completion");
+        if (origin === "admin") {
+          showScreen("admin");
+          adminActionMessage.textContent = registrationResults.map((result) => result.alreadyRegistered
+            ? `${result.person.name}さんは来会済みです`
+            : `${result.person.name}さんを受付しました`).join("、");
+          adminActionMessage.hidden = false;
+        } else {
+          completionName.replaceChildren(...registrationResults.map((result) => {
+            const row = document.createElement("div");
+            row.className = "completion-member-row";
+            row.textContent = `${result.person.name}さん：${result.alreadyRegistered ? "来会済みです" : "受付しました"}`;
+            return row;
+          }));
+          showScreen("completion");
+        }
       } catch (error) {
         showAppError(error);
       } finally {
@@ -1416,8 +1537,9 @@
     }
 
     function renderAdmin() {
-      adminMenu.hidden = !masterCode;
+      document.getElementById("open-role-admin").hidden = !masterCode;
       const selectedDate = historyDate.value || localDateKey(new Date());
+      const today = localDateKey(new Date());
       historyDate.value = selectedDate;
       const roles = loadRoles();
       const history = loadHistory();
@@ -1437,7 +1559,11 @@
       guestAttendanceCount.textContent = `${categoryCounts.guest}人`;
       attendanceList.replaceChildren();
 
-      SORTED_ROSTER.forEach((person) => {
+      const displayedRoster = adminSort.value === "number"
+        ? [...ROSTER].sort((a, b) => Number(a.id) - Number(b.id))
+        : SORTED_ROSTER;
+
+      displayedRoster.forEach((person) => {
         const record = recordsByMember.get(person.id);
         const arrived = Boolean(record);
         const row = document.createElement("tr");
@@ -1478,6 +1604,19 @@
           const status = document.createElement("span");
           status.className = "status status--arrived";
           status.textContent = "● 来会済み";
+          statusCell.append(status);
+        } else if (selectedDate === today) {
+          const checkinButton = document.createElement("button");
+          checkinButton.type = "button";
+          checkinButton.className = "admin-checkin-button";
+          checkinButton.textContent = "受付する";
+          checkinButton.setAttribute("aria-label", `${person.name}さんを受付する`);
+          checkinButton.addEventListener("click", () => selectPerson(person, "admin"));
+          statusCell.append(checkinButton);
+        } else {
+          const status = document.createElement("span");
+          status.className = "status status--waiting";
+          status.textContent = "";
           statusCell.append(status);
         }
         roleCell.textContent = ROLE_OPTIONS.find((option) => option.value === roles[person.id]).label;
@@ -1550,13 +1689,11 @@
       showExportMessage("CSVを出力しました");
     }
 
+    openNameSelection.addEventListener("click", openNameSelector);
+
     nameSelectBack.addEventListener("click", () => {
       if (nameSelectionStage === "candidates") {
-        const availableCharacters = selectedKanaRow?.characters.filter((character) =>
-          ROSTER.some((person) => surnameInitial(person) === character)
-        ) || [];
-        if (availableCharacters.length === 1) renderNameRows();
-        else renderNameCharacters();
+        renderNameCharacters();
       } else if (nameSelectionStage === "characters") {
         renderNameRows();
       } else {
@@ -1567,10 +1704,13 @@
     nameSelectionConfirm.addEventListener("click", () => {
       if (selectedPeople.length === 0) return;
       selectedPerson = selectedPeople[0];
+      confirmationOrigin = "reception";
       registerAttendance();
     });
 
     familySelectionButton.addEventListener("click", toggleFamilySelection);
+
+    adminNumberInput.addEventListener("click", openAdminKeypad);
 
     keypad.addEventListener("click", (event) => {
       const digit = event.target.dataset.digit;
@@ -1595,10 +1735,15 @@
 
     keypadBack.addEventListener("click", () => {
       keypadBuffer = "";
-      showScreen("reception");
+      showScreen("adminLogin");
     });
 
+    confirmOk.addEventListener("click", registerAttendance);
+    confirmNo.addEventListener("click", () => {
+      showScreen(confirmationOrigin === "admin" ? "admin" : "reception");
+    });
     historyDate.addEventListener("change", renderAdmin);
+    adminSort.addEventListener("change", renderAdmin);
     memberDetailStart.addEventListener("change", renderMemberDetail);
     memberDetailEnd.addEventListener("change", renderMemberDetail);
     periodExportForm.addEventListener("submit", (event) => {
@@ -1608,12 +1753,12 @@
 
     screenSwitch.addEventListener("click", () => {
       if (!authReady || operationPending) return;
-      const leavingManagement = currentScreen === "roleAdmin" || currentScreen === "accessAdmin" || currentScreen === "admin" || currentScreen === "keypad";
+      const leavingManagement = currentScreen === "roleAdmin" || currentScreen === "admin" ||
+        currentScreen === "adminLogin" ||
+        currentScreen === "keypad" ||
+        (currentScreen === "confirmation" && confirmationOrigin === "admin");
       if (leavingManagement) void sync.start();
-      else {
-        sync.clearAdmin();
-        openAdminKeypad();
-      }
+      else showScreen("adminLogin");
     });
 
     let masterCode = "";
@@ -1623,7 +1768,6 @@
     const logoutButton = document.getElementById("google-logout");
     let authReady = false;
     let receptionReady = false;
-    const connectionControls = document.getElementById("connection-controls");
     const syncStatus = document.getElementById("sync-status");
     const retryButton = document.getElementById("sync-retry");
 
@@ -1638,8 +1782,7 @@
         reception_denied: "受付資格を確認できません。",
         invalid_email: "Googleメールを確認してください。",
         email_in_use: "このメールは登録済みです。",
-        invalid_member_data: "氏名・かな・区分を確認してください。",
-        member_id_unavailable: "受付番号を自動決定できません。名簿を確認してください。",
+        invalid_member_data: "受付番号・氏名・かなを確認してください。",
         member_id_in_use: "この受付番号はすでに使われています。",
         not_ready: "接続の完了後に操作してください。"
       };
@@ -1650,6 +1793,7 @@
       operationPending = value;
       document.querySelector("main").inert = value || !authReady;
       screenSwitch.disabled = value || !authReady;
+      openNameSelection.disabled = value || !receptionReady;
       logoutButton.disabled = value;
     }
     function renderFromCache() {
@@ -1659,25 +1803,21 @@
       SORTED_ROSTER = [...ROSTER].sort((a, b) => a.familyKana.localeCompare(b.familyKana, "ja"));
       if (adminAuthorized && currentScreen === "admin") renderAdmin();
       if (currentScreen === "roleAdmin") renderRoleAdmin();
-      if (currentScreen === "accessAdmin") renderAccessAdmin();
+      if (adminAuthorized) renderAccessAdmin();
       // Names and family grouping do not change through the supported role UPDATE.
     }
     function renderRoleAdmin() {
       if (!adminAuthorized || !masterCode) return;
       const list = document.getElementById("role-admin-list");
       list.replaceChildren();
-      const selectedRole = roleAdminFilter.value;
-      const displayedRoster = selectedRole === "all"
-        ? SORTED_ROSTER
-        : SORTED_ROSTER.filter((person) => person.role === selectedRole);
-      displayedRoster.forEach((person) => {
+      SORTED_ROSTER.forEach((person) => {
         const row = document.createElement("div");
         row.className = "role-admin-row";
         const name = document.createElement("span");
-        name.textContent = person.name;
+        name.textContent = `${person.id} ${person.name}`;
         const select = document.createElement("select");
         select.className = "role-select";
-        select.setAttribute("aria-label", `${person.name}の区分`);
+        select.setAttribute("aria-label", `${person.name}の役職`);
         ROLE_OPTIONS.forEach((role) => {
           const option = document.createElement("option");
           option.value = role.value; option.textContent = role.label;
@@ -1696,43 +1836,22 @@
         row.append(name, select); list.append(row);
       });
     }
-    roleAdminFilter.addEventListener("change", renderRoleAdmin);
-
-    adminMenu.addEventListener("change", () => {
-      if (!authReady || !adminAuthorized || operationPending || !masterCode) {
-        adminMenu.value = "";
-        return;
-      }
-      const destination = adminMenu.value;
-      adminMenu.value = "";
-      if (destination === "roleAdmin") {
+    document.getElementById("open-role-admin").addEventListener("click", () => {
+      if (authReady && adminAuthorized && !operationPending) {
         memberAddMessage.hidden = true;
         showScreen("roleAdmin");
-      } else if (destination === "accessAdmin") {
-        accessRegisterMessage.hidden = true;
-        showScreen("accessAdmin");
       }
     });
     document.getElementById("role-admin-back").addEventListener("click", () => showScreen("admin"));
-    document.getElementById("access-admin-back").addEventListener("click", () => showScreen("admin"));
     memberAddForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       if (!authReady || !adminAuthorized || operationPending || !masterCode) return;
+      const memberId = memberAddId.valueAsNumber;
       const name = memberAddName.value.trim();
       const familyKana = memberAddKana.value.trim();
       const role = memberAddRole.value;
-      if (!name || !familyKana || !ROLE_OPTIONS.some(option => option.value === role)) {
+      if (!Number.isInteger(memberId) || memberId < 0 || !name || !familyKana || !ROLE_OPTIONS.some(option => option.value === role)) {
         showAppError(new Error("invalid_member_data"));
-        return;
-      }
-      const memberIds = ROSTER.map((person) => Number(person.id));
-      if (memberIds.length === 0 || memberIds.some((id) => !Number.isSafeInteger(id) || id < 0)) {
-        showAppError(new Error("member_id_unavailable"));
-        return;
-      }
-      const memberId = Math.max(...memberIds) + 1;
-      if (!Number.isSafeInteger(memberId)) {
-        showAppError(new Error("member_id_unavailable"));
         return;
       }
       setOperationPending(true); clearAppError(); memberAddMessage.hidden = true;
@@ -1745,96 +1864,38 @@
       finally { setOperationPending(false); if (currentScreen === "roleAdmin") renderRoleAdmin(); }
     });
 
-    function accessAccountsByMember() {
-      return new Map(sync.accounts().map((account) => [String(account.member_id), account]));
-    }
-
-    function renderAccessCandidates() {
-      const accounts = accessAccountsByMember();
-      const query = accessPersonSearch.value.trim().toLocaleLowerCase("ja");
-      const previous = accessPersonSelect.value;
-      const candidates = SORTED_ROSTER
-        .filter((person) => !accounts.has(person.id))
-        .filter((person) => !query || person.name.toLocaleLowerCase("ja").includes(query) || person.familyKana.toLocaleLowerCase("ja").includes(query));
-
-      accessPersonSelect.replaceChildren();
-      const placeholder = document.createElement("option");
-      placeholder.value = "";
-      placeholder.textContent = candidates.length ? "人物を選択してください" : "該当する未登録者はいません";
-      accessPersonSelect.append(placeholder);
-      candidates.forEach((person) => {
-        const option = document.createElement("option");
-        option.value = person.id;
-        option.textContent = person.name;
-        accessPersonSelect.append(option);
-      });
-      accessPersonSelect.disabled = candidates.length === 0;
-      if (candidates.some((person) => person.id === previous)) accessPersonSelect.value = previous;
-    }
-
+    let accessTab = "allowed";
     function renderAccessAdmin() {
       const list = document.getElementById("access-admin-list");
       list.replaceChildren();
       if (!adminAuthorized) return;
-
-      renderAccessCandidates();
-      const accounts = accessAccountsByMember();
-      SORTED_ROSTER.filter((person) => accounts.has(person.id)).forEach((person) => {
-        const account = accounts.get(person.id);
-        const allowed = account.allowed === true;
-        const row = document.createElement("div");
-        row.className = "role-admin-row access-admin-row";
-        const name = document.createElement("span");
-        name.className = "access-admin-name";
-        name.textContent = person.name;
-        const email = document.createElement("span");
-        email.className = "access-admin-email";
-        email.textContent = account.login_email;
-        const state = document.createElement("select");
-        state.className = "role-select";
-        state.setAttribute("aria-label", `${person.name}の受付権限`);
-        const allowedOption = document.createElement("option");
-        allowedOption.value = "allowed"; allowedOption.textContent = "許可";
-        const deniedOption = document.createElement("option");
-        deniedOption.value = "denied"; deniedOption.textContent = "不許可";
-        state.append(allowedOption, deniedOption);
-        state.value = allowed ? "allowed" : "denied";
-        state.addEventListener("change", async () => {
-          if (operationPending || !adminAuthorized) { renderAccessAdmin(); return; }
-          const nextAllowed = state.value === "allowed";
-          if (nextAllowed === allowed) return;
-          setOperationPending(true); clearAppError();
-          try { await sync.setAccess(Number(person.id), nextAllowed ? account.login_email : null); }
-          catch (error) { showAppError(error); }
-          finally { setOperationPending(false); if (currentScreen === "accessAdmin") renderAccessAdmin(); }
+      const accounts = new Map(sync.accounts().map(row => [String(row.member_id), row.login_email]));
+      SORTED_ROSTER.filter(person => ["pastor", "officer"].includes(person.role))
+        .filter(person => accounts.has(person.id) === (accessTab === "allowed"))
+        .forEach(person => {
+          const row = document.createElement("div"); row.className = "role-admin-row";
+          const label = document.createElement("span"); label.textContent = person.name;
+          const input = document.createElement("input"); input.type = "email";
+          input.setAttribute("aria-label", `${person.name}のGoogleメール`);
+          input.value = accounts.get(person.id) || ""; input.disabled = accessTab === "allowed";
+          const button = document.createElement("button"); button.type = "button"; button.className = "nav-button";
+          button.textContent = accessTab === "allowed" ? "許可を解除" : "メールを登録して許可";
+          button.addEventListener("click", async () => {
+            if (operationPending || !adminAuthorized) return;
+            if (accessTab !== "allowed" && (!input.value.trim() || !input.reportValidity())) return;
+            setOperationPending(true); clearAppError();
+            try { await sync.setAccess(Number(person.id), accessTab === "allowed" ? null : input.value.trim()); }
+            catch (error) { showAppError(error); }
+            finally { setOperationPending(false); renderAccessAdmin(); }
+          });
+          row.append(label, input, button); list.append(row);
         });
-        row.append(name, email, state);
-        list.append(row);
-      });
     }
-
-    accessPersonSearch.addEventListener("input", renderAccessCandidates);
-    accessRegisterForm.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      if (!authReady || !adminAuthorized || operationPending || !masterCode) return;
-      const memberId = accessPersonSelect.value;
-      const email = accessEmail.value.trim();
-      const accounts = accessAccountsByMember();
-      if (!memberId || accounts.has(memberId) || !accessEmail.reportValidity()) return;
-      if (!ROSTER.some((person) => person.id === memberId)) {
-        showAppError(new Error("invalid_member"));
-        return;
-      }
-      setOperationPending(true); clearAppError(); accessRegisterMessage.hidden = true;
-      try {
-        await sync.setAccess(Number(memberId), email);
-        const person = ROSTER.find((candidate) => candidate.id === memberId);
-        accessRegisterForm.reset();
-        accessRegisterMessage.textContent = `${person.name}さんを受付担当者として登録しました。`;
-        accessRegisterMessage.hidden = false;
-      } catch (error) { showAppError(error); }
-      finally { setOperationPending(false); if (currentScreen === "accessAdmin") renderAccessAdmin(); }
-    });
+    document.querySelectorAll("[data-access-tab]").forEach(button => button.addEventListener("click", () => {
+      accessTab = button.dataset.accessTab;
+      document.querySelectorAll("[data-access-tab]").forEach(item => item.setAttribute("aria-pressed", String(item === button)));
+      renderAccessAdmin();
+    }));
 
     const sync = (() => {
       let client = null, epoch = 0, channel = null, retryTimer = null, day = "";
@@ -1849,12 +1910,8 @@
       const current = token => token === epoch;
       function status(message) {
         syncStatus.textContent = message;
-        syncStatus.hidden = message === "接続済み";
-        const signedIn = sessionUserId !== null;
-        const operational = authReady && (message === "接続済み" || message === "受付資格がありません。管理画面は利用できます。");
-        connectionControls.hidden = operational;
-        loginButton.hidden = signedIn;
-        logoutButton.hidden = !signedIn;
+        loginButton.hidden = authReady;
+        logoutButton.hidden = !authReady;
         retryButton.hidden = !authReady;
         setOperationPending(operationPending);
       }
@@ -1863,7 +1920,6 @@
         selectedMemberDetail = null; memberDetail.hidden = true;
         attendanceList.replaceChildren(); document.getElementById("access-admin-list").replaceChildren();
         document.getElementById("role-admin-list").replaceChildren();
-        accessRegisterForm.reset(); accessRegisterMessage.hidden = true;
         if (!receptionReady) { memberCache = []; attendanceCache.clear(); }
         renderFromCache();
       }
@@ -1883,13 +1939,13 @@
         const { data, error } = await client.rpc(name, args);
         if (!current(token)) throw new Error("not_ready");
         if (error) {
-          if (error.message === "auth_denied") { sessionUserId = null; stop("Googleでログインしてください。"); }
+          if (error.message === "auth_denied") stop("Googleでログインしてください。");
           if (error.message === "reception_denied") {
             receptionReady = false; attendanceCache.clear();
             if (!adminAuthorized) { memberCache = []; renderFromCache(); showScreen("reception"); }
             status("受付資格がありません。管理画面は利用できます。");
           }
-          if (error.message === "master_denied") { clearAdmin(); if (authReady) openAdminKeypad(); }
+          if (error.message === "master_denied") { clearAdmin(); showScreen("adminLogin"); }
           throw error;
         }
         return data;
@@ -1982,7 +2038,7 @@
           const { data, error } = await client.auth.getSession();
           if (!current(token)) return;
           if (error) throw error;
-          if (!data.session) { sessionUserId = null; status("Googleでログインしてください。"); return; }
+          if (!data.session) { status("Googleでログインしてください。"); return; }
           sessionUserId = data.session.user.id;
           const permitted = await rpc("reception_status");
           if (!current(token)) return;
@@ -2009,9 +2065,6 @@
         const code = masterCode;
         const data = await rpc("admin_snapshot", { p_master_code: code });
         if (masterCode !== code) throw new Error("not_ready");
-        if (!data || !Array.isArray(data.members) || !Array.isArray(data.attendance) || !Array.isArray(data.access_accounts)) {
-          throw new Error("invalid_response");
-        }
         memberCache = data.members; accounts = data.access_accounts;
         adminHistory = new Map(data.attendance.map(row => [key(row), row]));
         attendanceCache.forEach(row => adminHistory.set(key(row), row));
@@ -2046,7 +2099,6 @@
         if (!authReady || operationPending || refreshing) return;
         refreshing = true;
         try {
-          updateDateLimits();
           if (day !== localDateKey(new Date())) { await start(); return; }
           const allowed = await rpc("reception_status");
           if (allowed !== receptionReady && !adminAuthorized) { await start(); return; }
@@ -2071,11 +2123,13 @@
           attendedAt: row.attended_at, categoryAtAttendance: row.category_at_attendance
         })), start, clearAdmin, loadAdmin,
         verifyMaster: code => rpc("verify_master", { p_master_code: code }),
-        async checkIn(ids) {
-          if (!authReady || !receptionReady) throw new Error("not_ready");
+        async checkIn(ids, admin) {
+          if (!authReady || !(admin ? adminAuthorized : receptionReady)) throw new Error("not_ready");
           const validate = rows => Array.isArray(rows) && ids.every(id => rows.some(row =>
             row.member_id === id && ["inserted", "already_registered"].includes(row.status)));
-          const rows = await writeRpc("check_in", { p_member_ids: ids }, validate);
+          const rows = await writeRpc(admin ? "admin_check_in" : "check_in", {
+            p_member_ids: ids, ...(admin ? { p_master_code: masterCode } : {})
+          }, validate);
           rows.forEach(merge); renderFromCache(); return rows;
         },
         async addMember(code, id, name, familyKana, role) {
@@ -2090,8 +2144,8 @@
           await loadAdmin();
         },
         async setAccess(id, email) {
-          await writeRpc("set_access_account", {
-            p_master_code: masterCode, p_member_id: id, p_login_email: email
+          await writeRpc(email === null ? "remove_access_account" : "set_access_account", {
+            p_master_code: masterCode, p_member_id: id, ...(email === null ? {} : { p_login_email: email })
           });
           await loadAdmin();
         },
@@ -2126,8 +2180,9 @@
     window.addEventListener("pageshow", (event) => { if (event.persisted) void sync.start(); });
 
 
-    updateDateLimits();
+    updateClock();
     historyDate.value = localDateKey(new Date());
+    setInterval(updateClock, 1000);
     sync.start();
   </script>
 </body>
