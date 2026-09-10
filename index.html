@@ -831,6 +831,17 @@
     .role-admin-row span { flex: 1; min-width: 160px; }
     .member-add-form { margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--line); }
     .member-add-form .role-select { width: 100%; height: 60px; }
+    .admin-menu {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      width: min(822px, 100%);
+      margin: 12px auto 20px;
+    }
+    .admin-menu .nav-button { width: 100%; }
+    .access-tabs { display: flex; gap: 12px; margin: 0 0 16px; }
+    .access-tabs .nav-button { flex: 1; }
+    @media (max-width: 560px) { .admin-menu { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
@@ -913,12 +924,10 @@
 
     <section id="admin-panel" class="panel panel--wide" aria-labelledby="admin-title" hidden>
       <h1 id="admin-title">来会状況</h1>
-      <button id="open-role-admin" class="nav-button" type="button" hidden>役職管理</button>
-      <section aria-label="受付利用者管理">
-        <button type="button" class="nav-button" data-access-tab="allowed" aria-pressed="true">受付許可</button>
-        <button type="button" class="nav-button" data-access-tab="unallowed" aria-pressed="false">未許可</button>
-        <div id="access-admin-list"></div>
-      </section>
+      <nav class="admin-menu" aria-label="管理メニュー">
+        <button id="open-access-admin" class="nav-button" type="button" hidden>受付許可</button>
+        <button id="open-role-admin" class="nav-button" type="button" hidden>役職管理</button>
+      </nav>
       <div class="admin-controls">
         <div class="admin-control">
           <label for="history-date">表示する日付</label>
@@ -1004,6 +1013,17 @@
         <p id="export-message" class="export-message" role="status" hidden></p>
       </section>
     </section>
+    <section id="access-admin-panel" class="panel" aria-labelledby="access-admin-title" hidden>
+      <h1 id="access-admin-title">受付許可</h1>
+      <section aria-label="受付利用者管理">
+        <div class="access-tabs" role="group" aria-label="受付許可状態">
+          <button type="button" class="nav-button" data-access-tab="allowed" aria-pressed="true">受付許可</button>
+          <button type="button" class="nav-button" data-access-tab="unallowed" aria-pressed="false">未許可</button>
+        </div>
+        <div id="access-admin-list"></div>
+      </section>
+      <button id="access-admin-back" class="action-button action-button--secondary" type="button">管理画面へ戻る</button>
+    </section>
     <section id="role-admin-panel" class="panel" aria-labelledby="role-admin-title" hidden>
       <h1 id="role-admin-title">役職管理</h1>
       <form id="member-add-form" class="member-add-form" novalidate>
@@ -1087,6 +1107,7 @@
       confirmation: document.getElementById("confirmation-panel"),
       completion: document.getElementById("completion-panel"),
       admin: document.getElementById("admin-panel"),
+      accessAdmin: document.getElementById("access-admin-panel"),
       roleAdmin: document.getElementById("role-admin-panel")
     };
 
@@ -1236,7 +1257,11 @@
     }
 
     function normalizeKanaForIndex(value) {
-      return value
+      return String(value ?? "")
+        .trim()
+        .normalize("NFKC")
+        .replace(/[\u30A1-\u30F6]/g, (character) =>
+          String.fromCharCode(character.charCodeAt(0) - 0x60))
         .normalize("NFD")
         .replace(/[\u3099\u309A]/g, "")
         .normalize("NFC");
@@ -1366,7 +1391,7 @@
         renderNameRows();
         name = "nameSelect";
       }
-      if (name === "roleAdmin" && (!adminAuthorized || !masterCode)) name = "adminLogin";
+      if (["accessAdmin", "roleAdmin"].includes(name) && (!adminAuthorized || !masterCode)) name = "adminLogin";
       if (name !== "keypad") { keypadBuffer = ""; keypadDisplay.textContent = ""; }
       if (receptionHomeRequested || name === "adminLogin") {
         masterCode = "";
@@ -1388,7 +1413,7 @@
       Object.entries(panels).forEach(([panelName, panel]) => {
         panel.hidden = panelName !== name;
       });
-      const managementContext = name === "roleAdmin" || name === "admin" ||
+      const managementContext = name === "accessAdmin" || name === "roleAdmin" || name === "admin" ||
         name === "adminLogin" ||
         name === "keypad" ||
         (name === "confirmation" && confirmationOrigin === "admin");
@@ -1396,13 +1421,14 @@
         ? "受付画面"
         : "管理画面";
 
-      if (name === "roleAdmin") {
+      if (name === "accessAdmin") {
+        renderAccessAdmin();
+      } else if (name === "roleAdmin") {
         renderRoleAdmin();
       } else if (name === "admin") {
         adminActionMessage.hidden = true;
         adminActionMessage.textContent = "";
         renderAdmin();
-        renderAccessAdmin();
         document.getElementById("admin-title").focus({ preventScroll: true });
       } else if (name === "adminLogin") {
         adminAuthorized = false;
@@ -1537,6 +1563,7 @@
     }
 
     function renderAdmin() {
+      document.getElementById("open-access-admin").hidden = !masterCode;
       document.getElementById("open-role-admin").hidden = !masterCode;
       const selectedDate = historyDate.value || localDateKey(new Date());
       const today = localDateKey(new Date());
@@ -1753,7 +1780,7 @@
 
     screenSwitch.addEventListener("click", () => {
       if (!authReady || operationPending) return;
-      const leavingManagement = currentScreen === "roleAdmin" || currentScreen === "admin" ||
+      const leavingManagement = currentScreen === "accessAdmin" || currentScreen === "roleAdmin" || currentScreen === "admin" ||
         currentScreen === "adminLogin" ||
         currentScreen === "keypad" ||
         (currentScreen === "confirmation" && confirmationOrigin === "admin");
@@ -1802,8 +1829,8 @@
       }));
       SORTED_ROSTER = [...ROSTER].sort((a, b) => a.familyKana.localeCompare(b.familyKana, "ja"));
       if (adminAuthorized && currentScreen === "admin") renderAdmin();
+      if (currentScreen === "accessAdmin") renderAccessAdmin();
       if (currentScreen === "roleAdmin") renderRoleAdmin();
-      if (adminAuthorized) renderAccessAdmin();
       // Names and family grouping do not change through the supported role UPDATE.
     }
     function renderRoleAdmin() {
@@ -1836,6 +1863,10 @@
         row.append(name, select); list.append(row);
       });
     }
+    document.getElementById("open-access-admin").addEventListener("click", () => {
+      if (authReady && adminAuthorized && !operationPending) showScreen("accessAdmin");
+    });
+    document.getElementById("access-admin-back").addEventListener("click", () => showScreen("admin"));
     document.getElementById("open-role-admin").addEventListener("click", () => {
       if (authReady && adminAuthorized && !operationPending) {
         memberAddMessage.hidden = true;
