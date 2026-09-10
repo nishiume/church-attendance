@@ -560,10 +560,19 @@
 
     .count-cards {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: minmax(0, 1.2fr) repeat(2, minmax(0, 1fr));
+      grid-template-rows: repeat(2, minmax(0, 1fr));
       gap: 12px;
       width: min(822px, 100%);
       margin: 20px auto 24px;
+    }
+
+    .count-card--total {
+      grid-column: 1;
+      grid-row: 1 / span 2;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
     }
 
     .admin-controls {
@@ -810,7 +819,10 @@
       .period-fields { grid-template-columns: 1fr; }
       .member-detail-fields { grid-template-columns: 1fr; }
       .admin-controls { grid-template-columns: 1fr; }
-      .count-cards { grid-template-columns: 1fr; }
+      .count-cards { gap: 6px; }
+      .count-card { padding: 10px 4px; }
+      .count-label { font-size: 0.82rem; }
+      .count-value { font-size: clamp(1.25rem, 7vw, 1.9rem); }
       .name-options { grid-template-columns: 1fr 1fr; }
       .name-options.name-options--rows {
         grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
@@ -944,9 +956,17 @@
         </div>
       </div>
       <div class="count-cards" aria-live="polite">
-        <div class="count-card">
-          <span class="count-label">来会合計</span>
+        <div class="count-card count-card--total">
+          <span class="count-label">来会者</span>
           <strong id="attendance-count" class="count-value">0人</strong>
+        </div>
+        <div class="count-card">
+          <span class="count-label">大人</span>
+          <strong id="adult-attendance-count" class="count-value">0人</strong>
+        </div>
+        <div class="count-card">
+          <span class="count-label">子ども</span>
+          <strong id="child-attendance-count" class="count-value">0人</strong>
         </div>
         <div class="count-card">
           <span class="count-label">教会員</span>
@@ -1049,6 +1069,7 @@
             <select id="member-add-role" class="role-select" required>
               <option value="member">教会員</option>
               <option value="guest">ゲスト</option>
+              <option value="child">子ども</option>
               <option value="officer">役員</option>
               <option value="pastor">牧師</option>
             </select>
@@ -1074,7 +1095,8 @@
       { value: "pastor", label: "牧師" },
       { value: "officer", label: "役員" },
       { value: "member", label: "教会員" },
-      { value: "guest", label: "ゲスト" }
+      { value: "guest", label: "ゲスト" },
+      { value: "child", label: "子ども" }
     ]);
     const KANA_ROWS = Object.freeze([
       { label: "あ行", characters: ["あ", "い", "う", "え", "お"] },
@@ -1139,6 +1161,8 @@
     const historyDate = document.getElementById("history-date");
     const adminSort = document.getElementById("admin-sort");
     const attendanceCount = document.getElementById("attendance-count");
+    const adultAttendanceCount = document.getElementById("adult-attendance-count");
+    const childAttendanceCount = document.getElementById("child-attendance-count");
     const memberAttendanceCount = document.getElementById("member-attendance-count");
     const guestAttendanceCount = document.getElementById("guest-attendance-count");
     const attendanceList = document.getElementById("attendance-list");
@@ -1580,12 +1604,20 @@
       );
 
       attendanceCount.textContent = `${recordsByMember.size}人`;
-      const categoryCounts = { member: 0, guest: 0 };
+      const categoryCounts = { member: 0, guest: 0, child: 0 };
       recordsByMember.forEach((record) => {
-        categoryCounts[record.categoryAtAttendance] += 1;
+        if (Object.hasOwn(categoryCounts, record.categoryAtAttendance)) {
+          categoryCounts[record.categoryAtAttendance] += 1;
+        }
       });
-      memberAttendanceCount.textContent = `${categoryCounts.member}人`;
-      guestAttendanceCount.textContent = `${categoryCounts.guest}人`;
+      const adultCount = categoryCounts.member + categoryCounts.guest;
+      const childCount = categoryCounts.child;
+      const memberCount = categoryCounts.member;
+      const guestCount = categoryCounts.guest + categoryCounts.child;
+      adultAttendanceCount.textContent = `${adultCount}人`;
+      childAttendanceCount.textContent = `${childCount}人`;
+      memberAttendanceCount.textContent = `${memberCount}人`;
+      guestAttendanceCount.textContent = `${guestCount}人`;
       attendanceList.replaceChildren();
 
       const displayedRoster = adminSort.value === "number"
@@ -1688,7 +1720,8 @@
       loadHistory().forEach((record) => {
         const date = record.attendanceDate;
         if (date < start || date > end) return;
-        if (selectedCategory !== "all" && record.categoryAtAttendance !== selectedCategory) return;
+        if (selectedCategory === "member" && record.categoryAtAttendance !== "member") return;
+        if (selectedCategory === "guest" && !["guest", "child"].includes(record.categoryAtAttendance)) return;
         const summary = summaries.get(record.memberId) || { lastDate: "", count: 0 };
         summary.lastDate = date > summary.lastDate ? date : summary.lastDate;
         summary.count += 1;
@@ -1806,7 +1839,7 @@
       const messages = {
         sunday_only: "受付は日本時間の日曜日のみ可能です。",
         invalid_member: "対象者を確認できません。再接続してください。",
-        invalid_role: "指定された役職は利用できません。",
+        invalid_role: "指定された区分は利用できません。",
         master_denied: "管理番号を確認できません。",
         auth_denied: "Googleでログインしてください。",
         reception_denied: "受付資格を確認できません。",
@@ -1847,7 +1880,7 @@
         name.textContent = `${person.id} ${person.name}`;
         const select = document.createElement("select");
         select.className = "role-select";
-        select.setAttribute("aria-label", `${person.name}の役職`);
+        select.setAttribute("aria-label", `${person.name}の区分`);
         ROLE_OPTIONS.forEach((role) => {
           const option = document.createElement("option");
           option.value = role.value; option.textContent = role.label;
