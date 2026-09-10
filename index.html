@@ -928,7 +928,7 @@
       <h1 id="admin-title">来会状況</h1>
       <nav class="admin-menu" aria-label="管理メニュー">
         <button id="open-access-admin" class="nav-button" type="button" hidden>受付許可</button>
-        <button id="open-role-admin" class="nav-button" type="button" hidden>役職管理</button>
+        <button id="open-role-admin" class="nav-button" type="button" hidden>会員登録</button>
       </nav>
       <div class="admin-controls">
         <div class="admin-control">
@@ -1016,6 +1016,7 @@
       </section>
     </section>
     <section id="access-admin-panel" class="panel" aria-labelledby="access-admin-title" hidden>
+      <button id="access-admin-back" class="action-button action-button--secondary" type="button">管理画面へ戻る</button>
       <h1 id="access-admin-title">受付許可</h1>
       <section aria-label="受付利用者管理">
         <div class="access-tabs" role="group" aria-label="受付許可状態">
@@ -1024,10 +1025,10 @@
         </div>
         <div id="access-admin-list"></div>
       </section>
-      <button id="access-admin-back" class="action-button action-button--secondary" type="button">管理画面へ戻る</button>
     </section>
     <section id="role-admin-panel" class="panel" aria-labelledby="role-admin-title" hidden>
-      <h1 id="role-admin-title">役職管理</h1>
+      <button id="role-admin-back" class="action-button action-button--secondary" type="button">管理画面へ戻る</button>
+      <h1 id="role-admin-title">会員登録</h1>
       <form id="member-add-form" class="member-add-form" novalidate>
         <h2>新しい人を追加</h2>
         <div class="member-detail-fields">
@@ -1057,7 +1058,6 @@
         <p id="member-add-message" class="export-message" role="status" hidden></p>
       </form>
       <div id="role-admin-list"></div>
-      <button id="role-admin-back" class="action-button action-button--secondary" type="button">管理画面へ戻る</button>
     </section>
   </main>
 
