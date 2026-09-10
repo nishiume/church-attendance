@@ -911,7 +911,7 @@
     <section id="name-select-panel" class="panel" aria-labelledby="name-select-title" hidden>
       <h1 id="name-select-title" class="name-select-heading">
         <span>名前から選ぶ</span>
-        <button id="family-selection-button" class="family-selection-button" type="button" hidden>家族で受付</button>
+        <button id="family-selection-button" class="family-selection-button" type="button" hidden>複数受付</button>
       </h1>
       <p id="name-select-instruction" class="lead"></p>
       <div id="name-options" class="name-options"></div>
@@ -1364,7 +1364,7 @@
       nameOptions.replaceChildren();
       nameSelectBack.hidden = false;
       familySelectionButton.hidden = false;
-      familySelectionButton.textContent = familySelectionMode ? "通常受付に戻る" : "家族で受付";
+      familySelectionButton.textContent = familySelectionMode ? "通常受付に戻る" : "複数受付";
       nameSelectionConfirm.hidden = !familySelectionMode;
       nameSelectionConfirm.disabled = true;
 
