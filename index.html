@@ -829,6 +829,8 @@
     #sync-status { margin: 0; text-align: center; }
     .role-admin-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
     .role-admin-row span { flex: 1; min-width: 160px; }
+    .access-name-actions { display: flex; align-items: center; gap: 8px; }
+    .role-admin-row .access-name-actions span { flex: 0 1 auto; min-width: 0; }
     .member-add-form { margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--line); }
     .member-add-form .role-select { width: 100%; height: 60px; }
     .admin-menu {
@@ -1919,7 +1921,15 @@
             catch (error) { showAppError(error); }
             finally { setOperationPending(false); renderAccessAdmin(); }
           });
-          row.append(label, input, button); list.append(row);
+          if (accessTab === "allowed") {
+            const nameActions = document.createElement("div");
+            nameActions.className = "access-name-actions";
+            nameActions.append(label, button);
+            row.append(nameActions, input);
+          } else {
+            row.append(label, input, button);
+          }
+          list.append(row);
         });
     }
     document.querySelectorAll("[data-access-tab]").forEach(button => button.addEventListener("click", () => {
