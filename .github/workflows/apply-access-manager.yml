@@ -25,7 +25,7 @@ jobs:
           grep -Fq 'nextAllowed ? account.login_email : null' index.html
           ! grep -Fq 'data-access-tab' index.html
           ! grep -Fq 'accessTab' index.html
-          python -c 'from pathlib import Path; import re; s=Path("index.html").read_text(); scripts=re.findall(r"<script(?:\\s[^>]*)?>([\\s\\S]*?)</script>",s,re.I); Path("/tmp/app.js").write_text(scripts[-1])'
+          python -c 'from pathlib import Path; s=Path("index.html").read_text(); Path("/tmp/app.js").write_text(s.rsplit("<script>",1)[1].split("</script>",1)[0])'
           node --check /tmp/app.js
       - name: Commit and self-delete
         run: |
