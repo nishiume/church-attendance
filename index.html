@@ -1660,20 +1660,7 @@
         if (arrived) {
           const status = document.createElement("span");
           status.className = "status status--arrived";
-          status.textContent = "● 来会済み";
-          statusCell.append(status);
-        } else if (selectedDate === today) {
-          const checkinButton = document.createElement("button");
-          checkinButton.type = "button";
-          checkinButton.className = "admin-checkin-button";
-          checkinButton.textContent = "受付する";
-          checkinButton.setAttribute("aria-label", `${person.name}さんを受付する`);
-          checkinButton.addEventListener("click", () => selectPerson(person, "admin"));
-          statusCell.append(checkinButton);
-        } else {
-          const status = document.createElement("span");
-          status.className = "status status--waiting";
-          status.textContent = "";
+          status.textContent = "〇";
           statusCell.append(status);
         }
         roleCell.textContent = ROLE_OPTIONS.find((option) => option.value === roles[person.id]).label;
