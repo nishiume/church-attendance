@@ -301,7 +301,6 @@
       font-size: 1.3rem;
     }
 
-    #open-name-selection,
     #admin-number {
       display: block;
       width: min(620px, 100%);
@@ -879,7 +878,6 @@
         <time id="current-time"></time>
       </p>
 
-      <button id="open-name-selection" class="form-button reception-action" type="button">名前から受付</button>
     </section>
 
     <section id="admin-login-panel" class="panel" aria-labelledby="admin-login-title" hidden>
@@ -1133,7 +1131,6 @@
     };
 
     const screenSwitch = document.getElementById("screen-switch");
-    const openNameSelection = document.getElementById("open-name-selection");
     const nameSelectTitle = document.getElementById("name-select-title");
     const nameSelectTitleText = nameSelectTitle.querySelector("span");
     const familySelectionButton = document.getElementById("family-selection-button");
@@ -1400,11 +1397,6 @@
       renderNameCandidates();
     }
 
-    function openNameSelector() {
-      if (!receptionReady || operationPending) return;
-      renderNameRows();
-      showScreen("nameSelect");
-    }
 
     function showScreen(name) {
       if (name !== "reception" && !authReady) name = "reception";
@@ -1469,7 +1461,6 @@
       } else if (name === "reception") {
         adminAuthorized = false;
         selectedPerson = null;
-        openNameSelection.focus({ preventScroll: true });
       } else if (name === "completion") {
         completionTimer = setTimeout(() => showScreen("reception"), 2000);
       }
@@ -1734,7 +1725,6 @@
       showExportMessage("CSVを出力しました");
     }
 
-    openNameSelection.addEventListener("click", openNameSelector);
 
     nameSelectBack.addEventListener("click", () => {
       if (nameSelectionStage === "candidates") {
@@ -1839,7 +1829,6 @@
       operationPending = value;
       document.querySelector("main").inert = value || !authReady;
       screenSwitch.disabled = value || !authReady;
-      openNameSelection.disabled = value || !receptionReady;
       logoutButton.disabled = value;
     }
     function renderFromCache() {
