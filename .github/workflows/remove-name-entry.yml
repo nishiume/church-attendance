@@ -23,6 +23,7 @@ jobs:
               ('    #open-name-selection,\n    #admin-number {', '    #admin-number {'),
               ('\n      <button id="open-name-selection" class="form-button reception-action" type="button">名前から受付</button>', ''),
               ('    const openNameSelection = document.getElementById("open-name-selection");\n', ''),
+              ('      openNameSelection.disabled = value || !receptionReady;\n', ''),
               ('\n    function openNameSelector() {\n      if (!receptionReady || operationPending) return;\n      renderNameRows();\n      showScreen("nameSelect");\n    }\n', '\n'),
               ('\n    openNameSelection.addEventListener("click", openNameSelector);\n', '\n'),
               ('      } else if (name === "reception") {\n        adminAuthorized = false;\n        selectedPerson = null;\n        openNameSelection.focus({ preventScroll: true });\n      } else if (name === "completion") {', '      } else if (name === "reception") {\n        adminAuthorized = false;\n        selectedPerson = null;\n      } else if (name === "completion") {'),
