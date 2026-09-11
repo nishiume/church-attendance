@@ -863,6 +863,7 @@
     .role-admin-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
     .role-admin-row span { flex: 1; min-width: 160px; }
     .access-name-actions { display: grid; grid-template-columns: minmax(0, 1fr) 5.5em; align-items: center; gap: 8px; width: 100%; }
+    .access-name-button { width: 100%; min-height: 0; padding: 0; border: 0; background: transparent; color: var(--text); font: inherit; font-weight: 800; text-align: left; }
     .role-admin-row .access-name-actions span { min-width: 0; }
     .member-add-form { margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--line); }
     .member-add-form .role-select { width: 100%; height: 60px; }
@@ -2040,14 +2041,22 @@
         const row = document.createElement("div");
         row.className = "role-admin-row";
 
-        const label = document.createElement("span");
+        const label = document.createElement("button");
+        label.type = "button";
+        label.className = "access-name-button";
         label.textContent = person.name;
+        label.setAttribute("aria-expanded", "false");
 
         const input = document.createElement("input");
         input.type = "email";
         input.value = account.login_email || "";
         input.disabled = true;
+        input.hidden = true;
         input.setAttribute("aria-label", `${person.name}のGoogleメール`);
+        label.addEventListener("click", () => {
+          input.hidden = !input.hidden;
+          label.setAttribute("aria-expanded", String(!input.hidden));
+        });
 
         const select = document.createElement("select");
         select.className = `role-select access-status-select${allowed ? " access-status-select--allowed" : ""}`;
