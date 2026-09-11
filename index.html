@@ -862,8 +862,8 @@
     #sync-status { margin: 0; text-align: center; }
     .role-admin-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
     .role-admin-row span { flex: 1; min-width: 160px; }
-    .access-name-actions { display: flex; align-items: center; gap: 8px; }
-    .role-admin-row .access-name-actions span { flex: 0 1 auto; min-width: 0; }
+    .access-name-actions { display: grid; grid-template-columns: minmax(0, 1fr) 5.5em; align-items: center; gap: 8px; width: 100%; }
+    .role-admin-row .access-name-actions span { min-width: 0; }
     .member-add-form { margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--line); }
     .member-add-form .role-select { width: 100%; height: 60px; }
     .admin-menu {
@@ -875,7 +875,8 @@
     }
     .admin-menu .nav-button { width: 100%; }
     .access-status-select {
-      min-width: 7em;
+      width: 5.5em;
+      min-width: 5.5em;
       border-color: var(--primary);
       color: var(--primary-dark);
       background: #fff;
