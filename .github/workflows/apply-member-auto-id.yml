@@ -1,0 +1,43 @@
+name: Apply member auto id
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/apply-member-auto-id.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update index
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text()
+          old = '''          <div>\n            <label for="member-add-id">受付番号</label>\n            <input id="member-add-id" type="number" min="0" step="1" inputmode="numeric" required>\n          </div>\n'''
+          if old not in s:
+              raise SystemExit('member id input block not found')
+          s = s.replace(old, '', 1)
+          s = s.replace('    const memberAddId = document.getElementById("member-add-id");\n', '', 1)
+          old_submit = '      const memberId = memberAddId.valueAsNumber;\n'
+          new_submit = '''      const memberId = ROSTER.reduce((maxId, person) => {\n        const id = Number(person.id);\n        return Number.isInteger(id) && id > maxId ? id : maxId;\n      }, 0) + 1;\n'''
+          if old_submit not in s:
+              raise SystemExit('member id submit line not found')
+          s = s.replace(old_submit, new_submit, 1)
+          s = s.replace('      if (!Number.isInteger(memberId) || memberId < 0 || !name || !familyKana || !ROLE_OPTIONS.some(option => option.value === role)) {\n', '      if (!Number.isSafeInteger(memberId) || memberId < 1 || !name || !familyKana || !ROLE_OPTIONS.some(option => option.value === role)) {\n', 1)
+          s = s.replace('        invalid_member_data: "受付番号・氏名・かなを確認してください。",\n', '        invalid_member_data: "氏名・かな・区分を確認してください。",\n', 1)
+          p.write_text(s)
+          PY
+          git config user.name "nishiume"
+          git config user.email "nishiumenishiume@gmail.com"
+          git rm .github/workflows/apply-member-auto-id.yml
+          git add index.html
+          git commit -m "Hide member number and auto-assign member id"
+          git push
