@@ -2028,10 +2028,10 @@ finally { setOperationPending(false); renderAccessAdmin(); }
         "invalid_member_data", "member_id_in_use", "not_ready"
       ]);
       const current = token => token === epoch;
-      function status(message) {
+      function status(message, checking = false) {
         syncStatus.textContent = message;
         connectionControls.hidden = authReady;
-        loginButton.hidden = authReady;
+        loginButton.hidden = authReady || checking;
         logoutButton.hidden = !authReady;
         retryButton.hidden = !authReady;
         setOperationPending(operationPending);
@@ -2051,7 +2051,7 @@ finally { setOperationPending(false); renderAccessAdmin(); }
       function stop(message, retry = false) {
         ++epoch; clearTimeout(retryTimer); authReady = false; clearData();
         if (channel && client) void client.removeChannel(channel); channel = null;
-        status(message); showScreen("reception");
+        status(message, retry); showScreen("reception");
         retryButton.hidden = false;
         if (retry && navigator.onLine) retryTimer = setTimeout(start, 3000);
       }
@@ -2150,7 +2150,7 @@ finally { setOperationPending(false); renderAccessAdmin(); }
       }
       async function start() {
         const token = ++epoch; clearTimeout(retryTimer);
-        authReady = false; clearData(); status("接続を確認しています"); showScreen("reception");
+        authReady = false; clearData(); status("接続を確認しています", true); showScreen("reception");
         try {
           if (!initializeClient()) return;
           const old = channel; channel = null;
