@@ -1,0 +1,59 @@
+name: Apply attendance name alignment
+on:
+  push:
+    paths:
+      - .github/workflows/apply-name-left.yml
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Update only member name alignment
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text()
+          old = '      text-align: center;\n      text-decoration: underline;\n'
+          new = '      text-align: left;\n      text-decoration: underline;\n'
+          marker = '    .member-name-button {\n'
+          start = s.index(marker)
+          end = s.index('    }\n', start)
+          block = s[start:end]
+          if block.count(old) != 1:
+              raise SystemExit('target mismatch')
+          block = block.replace(old, new, 1)
+          p.write_text(s[:start] + block + s[end:])
+          PY
+      - name: Verify targeted change
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          s = Path('index.html').read_text()
+          start = s.index('    .member-name-button {\n')
+          end = s.index('    }\n', start)
+          block = s[start:end]
+          assert 'text-align: left;' in block
+          assert 'text-align: center;' not in block
+          ids = re.findall(r'\bid="([^"]+)"', s)
+          assert len(ids) == len(set(ids))
+          scripts = re.findall(r'<script(?:\s[^>]*)?>([\s\S]*?)</script>', s, re.I)
+          Path('/tmp/app.js').write_text(scripts[-1])
+          PY
+          node --check /tmp/app.js
+      - name: Commit and remove workflow
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git rm .github/workflows/apply-name-left.yml
+          git commit -m "Left align attendance names"
+          git push origin main
