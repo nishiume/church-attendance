@@ -1,0 +1,60 @@
+name: Apply login visibility during connection check
+on:
+  push:
+    paths:
+      - .github/workflows/apply-login-visibility.yml
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Apply targeted login visibility change
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text()
+          changes = [
+              ('function status(message) {', 'function status(message, checking = false) {'),
+              ('loginButton.hidden = authReady;', 'loginButton.hidden = authReady || checking;'),
+              ('status(message); showScreen("reception");', 'status(message, retry); showScreen("reception");'),
+              ('authReady = false; clearData(); status("接続を確認しています"); showScreen("reception");', 'authReady = false; clearData(); status("接続を確認しています", true); showScreen("reception");'),
+          ]
+          for old, new in changes:
+              if s.count(old) != 1:
+                  raise SystemExit(f'target mismatch: {old!r} count={s.count(old)}')
+              s = s.replace(old, new, 1)
+          p.write_text(s)
+          PY
+      - name: Verify targeted change
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          s = Path('index.html').read_text()
+          assert 'function status(message, checking = false)' in s
+          assert 'loginButton.hidden = authReady || checking;' in s
+          assert 'status(message, retry); showScreen("reception");' in s
+          assert 'status("接続を確認しています", true);' in s
+          assert 'loginButton.hidden = authReady;' not in s
+          ids = re.findall(r'\bid="([^"]+)"', s)
+          assert len(ids) == len(set(ids))
+          scripts = re.findall(r'<script(?:\s[^>]*)?>([\s\S]*?)</script>', s, re.I)
+          Path('/tmp/app.js').write_text(scripts[-1])
+          PY
+          node --check /tmp/app.js
+      - name: Commit and remove workflow
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git rm .github/workflows/apply-login-visibility.yml
+          git commit -m "Hide login while connection is being checked"
+          git push origin main
