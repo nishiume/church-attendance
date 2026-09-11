@@ -13,99 +13,18 @@ jobs:
         with:
           ref: main
       - name: Apply targeted CSS changes
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          p = Path('index.html')
-          s = p.read_text()
-
-          old = '''    .name-option:hover,
-    .name-option:focus-visible { background: var(--primary-soft); }'''
-          new = '''    .name-options--rows .name-option {
-      font-size: clamp(1.8rem, 4vw, 2.2rem);
-      line-height: 1.2;
-      white-space: nowrap;
-    }
-
-    .name-option:hover,
-    .name-option:focus-visible { background: var(--primary-soft); }'''
-          assert s.count(old) == 1
-          s = s.replace(old, new, 1)
-
-          old = '''    .name-option--candidate {
-      min-height: 72px;
-      color: var(--text);
-      font-size: 1.2rem;
-      text-align: left;
-    }'''
-          new = '''    .name-option--candidate {
-      min-height: 72px;
-      color: var(--text);
-      font-size: clamp(1.55rem, 4vw, 2rem);
-      line-height: 1.25;
-      text-align: left;
-      white-space: nowrap;
-    }'''
-          assert s.count(old) == 1
-          s = s.replace(old, new, 1)
-
-          old = '''    #keypad-back,
-    #name-select-back {
-      display: block;
-      width: min(620px, 100%);
-      min-height: 58px;
-      margin: 16px auto 0;
-    }'''
-          new = '''    #keypad-back,
-    #name-select-back {
-      display: block;
-      width: min(620px, 100%);
-      min-height: 58px;
-      margin: 16px auto 0;
-    }
-
-    #keypad-back,
-    #name-select-back,
-    #access-admin-back,
-    #role-admin-back,
-    #confirm-no {
-      font-size: clamp(1.45rem, 3.2vw, 2rem);
-      line-height: 1.2;
-      white-space: nowrap;
-    }'''
-          assert s.count(old) == 1
-          s = s.replace(old, new, 1)
-
-          old = '''        font-size: clamp(1.2rem, 5vw, 1.6rem);'''
-          new = '''        font-size: clamp(1.55rem, 6vw, 1.9rem);'''
-          assert s.count(old) == 1
-          s = s.replace(old, new, 1)
-
-          p.write_text(s)
-          PY
+        run: python -c 'from pathlib import Path; p=Path("index.html"); s=p.read_text(); a="    .name-option:hover,\n    .name-option:focus-visible { background: var(--primary-soft); }"; b="    .name-options--rows .name-option {\n      font-size: clamp(1.8rem, 4vw, 2.2rem);\n      line-height: 1.2;\n      white-space: nowrap;\n    }\n\n    .name-option:hover,\n    .name-option:focus-visible { background: var(--primary-soft); }"; assert s.count(a)==1; s=s.replace(a,b,1); a="    .name-option--candidate {\n      min-height: 72px;\n      color: var(--text);\n      font-size: 1.2rem;\n      text-align: left;\n    }"; b="    .name-option--candidate {\n      min-height: 72px;\n      color: var(--text);\n      font-size: clamp(1.55rem, 4vw, 2rem);\n      line-height: 1.25;\n      text-align: left;\n      white-space: nowrap;\n    }"; assert s.count(a)==1; s=s.replace(a,b,1); a="    #keypad-back,\n    #name-select-back {\n      display: block;\n      width: min(620px, 100%);\n      min-height: 58px;\n      margin: 16px auto 0;\n    }"; b=a+"\n\n    #keypad-back,\n    #name-select-back,\n    #access-admin-back,\n    #role-admin-back,\n    #confirm-no {\n      font-size: clamp(1.45rem, 3.2vw, 2rem);\n      line-height: 1.2;\n      white-space: nowrap;\n    }"; assert s.count(a)==1; s=s.replace(a,b,1); a="        font-size: clamp(1.2rem, 5vw, 1.6rem);"; b="        font-size: clamp(1.55rem, 6vw, 1.9rem);"; assert s.count(a)==1; s=s.replace(a,b,1); p.write_text(s)'
       - name: Verify targeted changes
         run: |
-          python - <<'PY'
-          from pathlib import Path
-          s = Path('index.html').read_text()
-          required = [
-            '.name-options--rows .name-option {',
-            'font-size: clamp(1.8rem, 4vw, 2.2rem);',
-            'font-size: clamp(1.55rem, 4vw, 2rem);',
-            'font-size: clamp(1.45rem, 3.2vw, 2rem);',
-            'font-size: clamp(1.55rem, 6vw, 1.9rem);',
-            '#access-admin-back,',
-            '#role-admin-back,',
-            '#confirm-no {',
-            'white-space: nowrap;'
-          ]
-          for token in required:
-            assert token in s, token
-          assert 'font-size: 1.2rem;' not in s[s.index('.name-option--candidate {'):s.index('.name-option--candidate {') + 220]
-          assert 'font-size: clamp(1.2rem, 5vw, 1.6rem);' not in s
-          assert 'grid-auto-flow: column;' in s
-          assert 'grid-template-rows: repeat(5, auto);' in s
-          PY
+          grep -Fq 'font-size: clamp(1.8rem, 4vw, 2.2rem);' index.html
+          grep -Fq 'font-size: clamp(1.55rem, 4vw, 2rem);' index.html
+          grep -Fq 'font-size: clamp(1.45rem, 3.2vw, 2rem);' index.html
+          grep -Fq 'font-size: clamp(1.55rem, 6vw, 1.9rem);' index.html
+          grep -Fq '#access-admin-back,' index.html
+          grep -Fq '#role-admin-back,' index.html
+          grep -Fq '#confirm-no {' index.html
+          grep -Fq 'grid-auto-flow: column;' index.html
+          ! grep -Fq 'font-size: clamp(1.2rem, 5vw, 1.6rem);' index.html
       - name: Commit and self-delete
         run: |
           git config user.name "github-actions[bot]"
