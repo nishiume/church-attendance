@@ -1,0 +1,52 @@
+name: Apply attendance status display
+on:
+  push:
+    paths:
+      - .github/workflows/apply-attendance-status.yml
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Update attendance status display
+        shell: bash
+        run: |
+          python - <<'PY2'
+          from pathlib import Path
+          import base64
+          p = Path('index.html')
+          s = p.read_text()
+          old = base64.b64decode('ICAgICAgICBpZiAoYXJyaXZlZCkgewogICAgICAgICAgY29uc3Qgc3RhdHVzID0gZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgic3BhbiIpOwogICAgICAgICAgc3RhdHVzLmNsYXNzTmFtZSA9ICJzdGF0dXMgc3RhdHVzLS1hcnJpdmVkIjsKICAgICAgICAgIHN0YXR1cy50ZXh0Q29udGVudCA9ICLil48g5p2l5Lya5riI44G/IjsKICAgICAgICAgIHN0YXR1c0NlbGwuYXBwZW5kKHN0YXR1cyk7CiAgICAgICAgfSBlbHNlIGlmIChzZWxlY3RlZERhdGUgPT09IHRvZGF5KSB7CiAgICAgICAgICBjb25zdCBjaGVja2luQnV0dG9uID0gZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgiYnV0dG9uIik7CiAgICAgICAgICBjaGVja2luQnV0dG9uLnR5cGUgPSAiYnV0dG9uIjsKICAgICAgICAgIGNoZWNraW5CdXR0b24uY2xhc3NOYW1lID0gImFkbWluLWNoZWNraW4tYnV0dG9uIjsKICAgICAgICAgIGNoZWNraW5CdXR0b24udGV4dENvbnRlbnQgPSAi5Y+X5LuY44GZ44KLIjsKICAgICAgICAgIGNoZWNraW5CdXR0b24uc2V0QXR0cmlidXRlKCJhcmlhLWxhYmVsIiwgYCR7cGVyc29uLm5hbWV944GV44KT44KS5Y+X5LuY44GZ44KLYCk7CiAgICAgICAgICBjaGVja2luQnV0dG9uLmFkZEV2ZW50TGlzdGVuZXIoImNsaWNrIiwgKCkgPT4gc2VsZWN0UGVyc29uKHBlcnNvbiwgImFkbWluIikpOwogICAgICAgICAgc3RhdHVzQ2VsbC5hcHBlbmQoY2hlY2tpbkJ1dHRvbik7CiAgICAgICAgfSBlbHNlIHsKICAgICAgICAgIGNvbnN0IHN0YXR1cyA9IGRvY3VtZW50LmNyZWF0ZUVsZW1lbnQoInNwYW4iKTsKICAgICAgICAgIHN0YXR1cy5jbGFzc05hbWUgPSAic3RhdHVzIHN0YXR1cy0td2FpdGluZyI7CiAgICAgICAgICBzdGF0dXMudGV4dENvbnRlbnQgPSAiIjsKICAgICAgICAgIHN0YXR1c0NlbGwuYXBwZW5kKHN0YXR1cyk7CiAgICAgICAgfQo=').decode()
+          new = base64.b64decode('ICAgICAgICBpZiAoYXJyaXZlZCkgewogICAgICAgICAgY29uc3Qgc3RhdHVzID0gZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgic3BhbiIpOwogICAgICAgICAgc3RhdHVzLmNsYXNzTmFtZSA9ICJzdGF0dXMgc3RhdHVzLS1hcnJpdmVkIjsKICAgICAgICAgIHN0YXR1cy50ZXh0Q29udGVudCA9ICLjgIciOwogICAgICAgICAgc3RhdHVzQ2VsbC5hcHBlbmQoc3RhdHVzKTsKICAgICAgICB9Cg==').decode()
+          if s.count(old) != 1:
+              raise SystemExit('target block mismatch')
+          p.write_text(s.replace(old, new, 1))
+          PY2
+      - name: Verify
+        shell: bash
+        run: |
+          python - <<'PY2'
+          from pathlib import Path
+          import re
+          s = Path('index.html').read_text()
+          scripts = re.findall(r'<script(?:\s[^>]*)?>([\s\S]*?)</script>', s, re.I)
+          Path('/tmp/app.js').write_text(scripts[-1])
+          assert 'status.textContent = "〇"' in s
+          assert 'checkinButton.textContent = "受付する"' not in s
+          ids = re.findall(r'\bid="([^"]+)"', s)
+          assert len(ids) == len(set(ids))
+          PY2
+          node --check /tmp/app.js
+      - name: Commit and remove workflow
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git rm .github/workflows/apply-attendance-status.yml
+          git commit -m "Simplify attendance status display"
+          git push origin main
