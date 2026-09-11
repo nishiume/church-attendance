@@ -20,7 +20,7 @@ jobs:
           source = Path('.github/workflows/apply-access-search.yml').read_text()
           marker = "replacement = '''"
           start = source.index(marker) + len(marker)
-          end = source.index("\n          '''", start)
+          end = source.index("\n'''", start)
           lines = source[start:end].splitlines()
           replacement = '\n'.join([lines[0]] + [line[10:] if line.startswith('          ') else line for line in lines[1:]]) + '\n'
           p = Path('index.html')
