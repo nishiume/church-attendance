@@ -370,6 +370,12 @@
       font-weight: 800;
     }
 
+    .name-options.name-options--rows {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-rows: repeat(5, auto);
+      grid-auto-flow: column;
+    }
+
     .name-options--rows .name-option {
       font-size: clamp(1.8rem, 4vw, 2.2rem);
       line-height: 1.2;
