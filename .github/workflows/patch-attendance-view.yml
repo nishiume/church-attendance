@@ -1,0 +1,57 @@
+name: Patch attendance view
+on:
+  push:
+    paths:
+      - .github/workflows/patch-attendance-view.yml
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch index
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text()
+          def rep(old,new):
+              global s
+              if old not in s: raise SystemExit('missing: '+old[:80])
+              s=s.replace(old,new,1)
+          rep('<button id="screen-switch" class="nav-button" type="button" disabled>管理画面</button>', '<button id="screen-switch" class="nav-button" type="button" disabled>来会状況</button>\n    <button id="admin-manage-button" class="nav-button" type="button" hidden>管理</button>')
+          rep('<h1 id="admin-login-title">管理画面</h1>', '<h1 id="admin-login-title">管理</h1>')
+          rep('      <nav class="admin-menu" aria-label="管理メニュー">\n        <button id="open-access-admin" class="nav-button" type="button" hidden>受付者管理</button>\n        <button id="open-role-admin" class="nav-button" type="button" hidden>会員登録</button>\n      </nav>', '')
+          rep('const screenSwitch = document.getElementById("screen-switch");', 'const screenSwitch = document.getElementById("screen-switch");\n    const adminManageButton = document.getElementById("admin-manage-button");')
+          rep('      if (["accessAdmin", "roleAdmin"].includes(name) && (!adminAuthorized || !masterCode)) name = "adminLogin";', '      if (["accessAdmin", "roleAdmin"].includes(name) && (!adminAuthorized || !masterCode)) name = "adminLogin";')
+          rep('      if (receptionHomeRequested || name === "adminLogin") {\n        masterCode = "";\n        sync.clearAdmin();\n      }', '      if (receptionHomeRequested) {\n        masterCode = "";\n        sync.clearAdmin();\n      }')
+          rep('      if (name === "admin" && !adminAuthorized) name = "adminLogin";\n', '')
+          old='''      const managementContext = name === "accessAdmin" || name === "roleAdmin" || name === "admin" ||\n        name === "adminLogin" ||\n        name === "keypad" ||\n        (name === "confirmation" && confirmationOrigin === "admin");\n      screenSwitch.textContent = managementContext\n        ? "受付画面"\n        : "管理画面";'''
+          new='''      const attendanceContext = name === "admin";\n      screenSwitch.textContent = attendanceContext ? "受付" : "来会状況";\n      adminManageButton.hidden = !attendanceContext;'''
+          rep(old,new)
+          rep('''      } else if (name === "admin") {\n        adminActionMessage.hidden = true;\n        adminActionMessage.textContent = "";\n        renderAdmin();\n        document.getElementById("admin-title").focus({ preventScroll: true });''', '''      } else if (name === "admin") {\n        adminActionMessage.hidden = true;\n        adminActionMessage.textContent = "";\n        void sync.loadAttendanceView().then(() => {\n          if (currentScreen === "admin") renderAdmin();\n        }).catch(showAppError);\n        document.getElementById("admin-title").focus({ preventScroll: true });''')
+          rep('''    function renderAdmin() {\n      document.getElementById("open-access-admin").hidden = !masterCode;\n      document.getElementById("open-role-admin").hidden = !masterCode;''', '''    function renderAdmin() {''')
+          rep('''        lastDateCell.textContent = lastDate\n          ? `${Number(lastDate.slice(5, 7))}/${Number(lastDate.slice(8, 10))}`\n          : "";''', '''        lastDateCell.textContent = lastDate\n          ? `${Number(lastDate.slice(5, 7))}/${Number(lastDate.slice(8, 10))}（${Math.max(0, Math.round((new Date(`${selectedDate}T00:00:00+09:00`) - new Date(`${lastDate}T00:00:00+09:00`)) / 86400000))}日前）`\n          : "";''')
+          rep('''        })), start, clearAdmin, loadAdmin,\n        verifyMaster:''', '''        })), start, clearAdmin, loadAdmin,\n        async loadAttendanceView() {\n          if (!authReady) throw new Error("not_ready");\n          const data = await rpc("attendance_view_snapshot");\n          memberCache = data.members;\n          adminHistory = new Map(data.attendance.map(row => [key(row), row]));\n          attendanceCache.forEach(row => adminHistory.set(key(row), row));\n          renderFromCache();\n        },\n        verifyMaster:''')
+          rep('''    screenSwitch.addEventListener("click", () => {\n      if (!authReady || operationPending) return;\n      const leavingManagement = currentScreen === "accessAdmin" || currentScreen === "roleAdmin" || currentScreen === "admin" ||\n        currentScreen === "adminLogin" ||''', '''    adminManageButton.addEventListener("click", () => {\n      if (!authReady || operationPending || currentScreen !== "admin") return;\n      showScreen("adminLogin");\n    });\n\n    screenSwitch.addEventListener("click", () => {\n      if (!authReady || operationPending) return;\n      const leavingManagement = currentScreen === "accessAdmin" || currentScreen === "roleAdmin" || currentScreen === "admin" ||\n        currentScreen === "adminLogin" ||''')
+          # Replace the switch handler wholesale by locating its next listener.
+          start=s.index('    screenSwitch.addEventListener("click", () => {')
+          end=s.index('    adminNumberInput.addEventListener', start)
+          handler='''    screenSwitch.addEventListener("click", () => {\n      if (!authReady || operationPending) return;\n      if (currentScreen === "admin") showScreen("reception");\n      else showScreen("admin");\n    });\n\n'''
+          s=s[:start]+handler+s[end:]
+          # After successful master verification, keep existing admin load then enter first management page is wrong; expose menu by using existing admin buttons impossible removed. Add two buttons to login panel after verification via existing flow? Keep buttons in protected login panel hidden until auth.
+          rep('<p id="admin-number-message" class="message" role="alert" hidden></p>', '<p id="admin-number-message" class="message" role="alert" hidden></p>\n      <nav id="protected-admin-menu" class="admin-menu" aria-label="管理メニュー" hidden>\n        <button id="open-access-admin" class="nav-button" type="button">受付者管理</button>\n        <button id="open-role-admin" class="nav-button" type="button">会員登録</button>\n      </nav>')
+          # Reveal protected menu after successful authorization wherever adminAuthorized is set true.
+          rep('adminAuthorized = true;', 'adminAuthorized = true;\n        document.getElementById("admin-number").hidden = true;\n        document.getElementById("protected-admin-menu").hidden = false;', )
+          # Reset protected menu when entering admin login.
+          rep('''      } else if (name === "adminLogin") {\n        adminAuthorized = false;\n        clearAdminLogin();''', '''      } else if (name === "adminLogin") {\n        adminAuthorized = false;\n        document.getElementById("admin-number").hidden = false;\n        document.getElementById("protected-admin-menu").hidden = true;\n        clearAdminLogin();''')
+          # CSV is viewing functionality, not master authorization.
+          rep('if (!authReady || !adminAuthorized || operationPending) return;', 'if (!authReady || operationPending || currentScreen !== "admin") return;')
+          p.write_text(s)
+          PY
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add index.html
+          git commit -m "Separate attendance view from protected management"
+          git push
