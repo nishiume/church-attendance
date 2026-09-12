@@ -14,8 +14,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Patch index.html
-        shell: python
         run: |
+          python - <<'PY'
           from pathlib import Path
 
           path = Path("index.html")
@@ -44,6 +44,7 @@ jobs:
               raise SystemExit(f"expected exactly one match, found {text.count(old)}")
           text = text.replace(old, new, 1)
           path.write_text(text, encoding="utf-8")
+          PY
       - name: Commit index.html
         run: |
           git config user.name "github-actions[bot]"
