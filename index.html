@@ -1000,13 +1000,6 @@
           <label for="history-date">表示する日付</label>
           <input id="history-date" type="date">
         </div>
-        <div class="admin-control">
-          <label for="admin-sort">並び順</label>
-          <select id="admin-sort">
-            <option value="kana">50音順</option>
-            <option value="number">番号順</option>
-          </select>
-        </div>
       </div>
       <div class="count-cards" aria-live="polite">
         <div class="count-card count-card--total">
@@ -1098,6 +1091,13 @@
     <section id="role-admin-panel" class="panel" aria-labelledby="role-admin-title" hidden>
       <button id="role-admin-back" class="action-button action-button--secondary" type="button">管理へ戻る</button>
       <h1 id="role-admin-title">会員登録</h1>
+      <div class="admin-control">
+        <label for="role-admin-sort">並び順</label>
+        <select id="role-admin-sort">
+          <option value="kana">50音順</option>
+          <option value="number">番号順</option>
+        </select>
+      </div>
       <form id="member-add-form" class="member-add-form" novalidate>
         <h2>新しい人を追加</h2>
         <div class="member-detail-fields">
@@ -1651,9 +1651,7 @@
       guestAttendanceCount.textContent = `${guestCount}人`;
       attendanceList.replaceChildren();
 
-      const displayedRoster = adminSort.value === "number"
-        ? [...ROSTER].sort((a, b) => Number(a.id) - Number(b.id))
-        : SORTED_ROSTER;
+      const displayedRoster = SORTED_ROSTER;
 
       displayedRoster.forEach((person) => {
         const record = recordsByMember.get(person.id);
@@ -1822,7 +1820,6 @@
       showScreen(confirmationOrigin === "admin" ? "admin" : "reception");
     });
     historyDate.addEventListener("change", renderAdmin);
-    adminSort.addEventListener("change", renderAdmin);
     memberDetailStart.addEventListener("change", renderMemberDetail);
     memberDetailEnd.addEventListener("change", renderMemberDetail);
     periodExportForm.addEventListener("submit", (event) => {
@@ -1891,7 +1888,11 @@
       if (!adminAuthorized || !masterCode) return;
       const list = document.getElementById("role-admin-list");
       list.replaceChildren();
-      SORTED_ROSTER.forEach((person) => {
+      const roleAdminSort = document.getElementById("role-admin-sort");
+      const displayedRoster = roleAdminSort.value === "number"
+        ? [...ROSTER].sort((a, b) => Number(a.id) - Number(b.id))
+        : SORTED_ROSTER;
+      displayedRoster.forEach((person) => {
         const row = document.createElement("div");
         row.className = "role-admin-row";
         const number = document.createElement("span");
@@ -1921,6 +1922,7 @@
         row.append(number, name, select); list.append(row);
       });
     }
+    document.getElementById("role-admin-sort").addEventListener("change", renderRoleAdmin);
     document.getElementById("open-access-admin").addEventListener("click", () => {
       if (authReady && adminAuthorized && !operationPending) showScreen("accessAdmin");
     });
