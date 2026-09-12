@@ -14,46 +14,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Patch index.html
-        shell: python
         run: |
+          python - <<'PY'
           from pathlib import Path
-
           path = Path("index.html")
           text = path.read_text(encoding="utf-8")
-
-          old_css = '''    .role-admin-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
-    .role-admin-row span { flex: 1; min-width: 160px; }
-'''
-          new_css = '''    .role-admin-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
-    .role-admin-row span { flex: 1; min-width: 160px; }
-    .role-admin-row .role-admin-number { flex: 0 0 3ch; min-width: 3ch; text-align: left; font-variant-numeric: tabular-nums; }
-    .role-admin-row .role-admin-name { flex: 1; min-width: 0; text-align: left; }
-'''
-
-          old_js = '''        const name = document.createElement("span");
-        name.textContent = `${person.id} ${person.name}`;
-        const select = document.createElement("select");
-'''
-          new_js = '''        const number = document.createElement("span");
-        number.className = "role-admin-number";
-        number.textContent = String(person.id).padStart(3, "0");
-        const name = document.createElement("span");
-        name.className = "role-admin-name";
-        name.textContent = person.name;
-        const select = document.createElement("select");
-'''
-
-          old_append = '''        row.append(name, select); list.append(row);
-'''
-          new_append = '''        row.append(number, name, select); list.append(row);
-'''
-
+          old_css = "    .role-admin-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }\n    .role-admin-row span { flex: 1; min-width: 160px; }\n"
+          new_css = old_css + "    .role-admin-row .role-admin-number { flex: 0 0 3ch; min-width: 3ch; text-align: left; font-variant-numeric: tabular-nums; }\n    .role-admin-row .role-admin-name { flex: 1; min-width: 0; text-align: left; }\n"
+          old_js = "        const name = document.createElement(\"span\");\n        name.textContent = `${person.id} ${person.name}`;\n        const select = document.createElement(\"select\");\n"
+          new_js = "        const number = document.createElement(\"span\");\n        number.className = \"role-admin-number\";\n        number.textContent = String(person.id).padStart(3, \"0\");\n        const name = document.createElement(\"span\");\n        name.className = \"role-admin-name\";\n        name.textContent = person.name;\n        const select = document.createElement(\"select\");\n"
+          old_append = "        row.append(name, select); list.append(row);\n"
+          new_append = "        row.append(number, name, select); list.append(row);\n"
           for old, new in ((old_css, new_css), (old_js, new_js), (old_append, new_append)):
               if text.count(old) != 1:
                   raise SystemExit(f"expected exactly one match, found {text.count(old)}")
               text = text.replace(old, new, 1)
-
           path.write_text(text, encoding="utf-8")
+          PY
       - name: Commit index.html
         run: |
           git config user.name "github-actions[bot]"
