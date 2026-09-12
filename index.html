@@ -871,6 +871,8 @@
     #sync-status { margin: 0; text-align: center; }
     .role-admin-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
     .role-admin-row span { flex: 1; min-width: 160px; }
+    .role-admin-row .role-admin-number { flex: 0 0 3ch; min-width: 3ch; text-align: left; font-variant-numeric: tabular-nums; }
+    .role-admin-row .role-admin-name { flex: 1; min-width: 0; text-align: left; }
     .access-name-actions { display: grid; grid-template-columns: minmax(0, 1fr) 5.5em; align-items: center; gap: 8px; width: 100%; }
     .access-name-button { width: 100%; min-height: 0; padding: 0; border: 0; background: transparent; color: var(--text); font: inherit; font-weight: 800; text-align: left; }
     .role-admin-row .access-name-actions span { min-width: 0; }
@@ -1889,8 +1891,12 @@
       SORTED_ROSTER.forEach((person) => {
         const row = document.createElement("div");
         row.className = "role-admin-row";
+        const number = document.createElement("span");
+        number.className = "role-admin-number";
+        number.textContent = String(person.id).padStart(3, "0");
         const name = document.createElement("span");
-        name.textContent = `${person.id} ${person.name}`;
+        name.className = "role-admin-name";
+        name.textContent = person.name;
         const select = document.createElement("select");
         select.className = "role-select";
         select.setAttribute("aria-label", `${person.name}の区分`);
@@ -1909,7 +1915,7 @@
           catch (error) { showAppError(error); }
           finally { setOperationPending(false); if (currentScreen === "roleAdmin") renderRoleAdmin(); }
         });
-        row.append(name, select); list.append(row);
+        row.append(number, name, select); list.append(row);
       });
     }
     document.getElementById("open-access-admin").addEventListener("click", () => {
