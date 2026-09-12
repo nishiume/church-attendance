@@ -1,0 +1,64 @@
+name: Patch role admin layout
+
+on:
+  push:
+    paths:
+      - .github/workflows/patch-role-admin-layout.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch index.html
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("index.html")
+          text = path.read_text(encoding="utf-8")
+
+          old_css = '''    .role-admin-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+    .role-admin-row span { flex: 1; min-width: 160px; }
+'''
+          new_css = '''    .role-admin-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+    .role-admin-row span { flex: 1; min-width: 160px; }
+    .role-admin-row .role-admin-number { flex: 0 0 3ch; min-width: 3ch; text-align: left; font-variant-numeric: tabular-nums; }
+    .role-admin-row .role-admin-name { flex: 1; min-width: 0; text-align: left; }
+'''
+
+          old_js = '''        const name = document.createElement("span");
+        name.textContent = `${person.id} ${person.name}`;
+        const select = document.createElement("select");
+'''
+          new_js = '''        const number = document.createElement("span");
+        number.className = "role-admin-number";
+        number.textContent = String(person.id).padStart(3, "0");
+        const name = document.createElement("span");
+        name.className = "role-admin-name";
+        name.textContent = person.name;
+        const select = document.createElement("select");
+'''
+
+          old_append = '''        row.append(name, select); list.append(row);
+'''
+          new_append = '''        row.append(number, name, select); list.append(row);
+'''
+
+          for old, new in ((old_css, new_css), (old_js, new_js), (old_append, new_append)):
+              if text.count(old) != 1:
+                  raise SystemExit(f"expected exactly one match, found {text.count(old)}")
+              text = text.replace(old, new, 1)
+
+          path.write_text(text, encoding="utf-8")
+      - name: Commit index.html
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git diff --cached --quiet && exit 0
+          git commit -m "Separate member number and name columns"
+          git push
