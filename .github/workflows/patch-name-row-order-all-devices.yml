@@ -17,32 +17,13 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-
           path = Path("index.html")
           text = path.read_text(encoding="utf-8")
-
-          old = '''    .name-options--rows .name-option {
-      font-size: clamp(1.8rem, 4vw, 2.2rem);
-      line-height: 1.2;
-      white-space: nowrap;
-    }
-'''
-          new = '''    .name-options.name-options--rows {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      grid-template-rows: repeat(5, auto);
-      grid-auto-flow: column;
-    }
-
-    .name-options--rows .name-option {
-      font-size: clamp(1.8rem, 4vw, 2.2rem);
-      line-height: 1.2;
-      white-space: nowrap;
-    }
-'''
-
-          if text.count(old) != 1:
-              raise SystemExit(f"expected exactly one match, found {text.count(old)}")
-          text = text.replace(old, new, 1)
+          marker = "    .name-options--rows .name-option {"
+          if text.count(marker) != 1:
+              raise SystemExit(f"expected exactly one match, found {text.count(marker)}")
+          insert = "    .name-options.name-options--rows {\n      grid-template-columns: repeat(2, minmax(0, 1fr));\n      grid-template-rows: repeat(5, auto);\n      grid-auto-flow: column;\n    }\n\n" + marker
+          text = text.replace(marker, insert, 1)
           path.write_text(text, encoding="utf-8")
           PY
       - name: Commit index.html
