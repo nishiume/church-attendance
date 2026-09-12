@@ -1239,7 +1239,6 @@
     let selectedKana = "";
     let selectedPeople = [];
     let familySelectionMode = false;
-    let confirmationOrigin = "reception";
     let selectedMemberDetail = null;
 
     function localDateKey(date) {
@@ -1512,23 +1511,10 @@
       }
     }
 
-    function selectPerson(person, origin = "reception") {
-      if (!authReady || operationPending) return;
-      selectedPerson = person;
-      selectedPeople = [person];
-      confirmationOrigin = origin;
-      confirmationName.textContent = selectedPeople.map((candidate) => `${candidate.name}さん`).join("、");
-      confirmOk.textContent = origin === "admin" ? "受付する" : "OK";
-      confirmNo.textContent = origin === "admin" ? "戻る" : "NO";
-      showScreen("confirmation");
-      confirmOk.focus({ preventScroll: true });
-    }
-
     function selectPeople(people) {
       if (people.length === 0) return;
       selectedPerson = people[0];
       selectedPeople = people;
-      confirmationOrigin = "reception";
       confirmationName.textContent = people.map((person) => `${person.name}さん`).join("、");
       confirmOk.textContent = "OK";
       confirmNo.textContent = "NO";
@@ -1540,40 +1526,30 @@
       if (!receptionReady || operationPending) return;
       selectedPerson = person;
       selectedPeople = [person];
-      confirmationOrigin = "reception";
       registerAttendance();
     }
 
     async function registerAttendance() {
-      if (!authReady || operationPending || !selectedPerson || !(confirmationOrigin === "admin" ? adminAuthorized : receptionReady)) return;
-      const origin = confirmationOrigin;
+      if (!authReady || operationPending || !selectedPerson || !receptionReady) return;
       const people = [...(selectedPeople.length ? selectedPeople : [selectedPerson])];
       const epoch = sync.epoch;
       setOperationPending(true);
       clearAppError();
       try {
-        const results = await sync.checkIn(people.map((person) => Number(person.id)), origin === "admin");
+        const results = await sync.checkIn(people.map((person) => Number(person.id)));
         if (!authReady || epoch !== sync.epoch) return;
         const registrationResults = people.map((person) => ({
           person, alreadyRegistered: results.find((result) => String(result.member_id) === person.id).status === "already_registered"
         }));
         selectedPerson = null;
         selectedPeople = [];
-        if (origin === "admin") {
-          showScreen("admin");
-          adminActionMessage.textContent = registrationResults.map((result) => result.alreadyRegistered
-            ? `${result.person.name}さんは来会済みです`
-            : `${result.person.name}さんを受付しました`).join("、");
-          adminActionMessage.hidden = false;
-        } else {
-          completionName.replaceChildren(...registrationResults.map((result) => {
-            const row = document.createElement("div");
-            row.className = "completion-member-row";
-            row.textContent = `${result.person.name}さん：${result.alreadyRegistered ? "来会済みです" : "受付しました"}`;
-            return row;
-          }));
-          showScreen("completion");
-        }
+        completionName.replaceChildren(...registrationResults.map((result) => {
+          const row = document.createElement("div");
+          row.className = "completion-member-row";
+          row.textContent = `${result.person.name}さん：${result.alreadyRegistered ? "来会済みです" : "受付しました"}`;
+          return row;
+        }));
+        showScreen("completion");
       } catch (error) {
         showAppError(error);
       } finally {
@@ -2346,13 +2322,11 @@
           renderFromCache();
         },
         verifyMaster: code => rpc("verify_master", { p_master_code: code }),
-        async checkIn(ids, admin) {
-          if (!authReady || !(admin ? adminAuthorized : receptionReady)) throw new Error("not_ready");
+        async checkIn(ids) {
+          if (!authReady || !receptionReady) throw new Error("not_ready");
           const validate = rows => Array.isArray(rows) && ids.every(id => rows.some(row =>
             row.member_id === id && ["inserted", "already_registered"].includes(row.status)));
-          const rows = await writeRpc(admin ? "admin_check_in" : "check_in", {
-            p_member_ids: ids, ...(admin ? { p_master_code: masterCode } : {})
-          }, validate);
+          const rows = await writeRpc("check_in", { p_member_ids: ids }, validate);
           rows.forEach(merge); renderFromCache(); return rows;
         },
         async addMember(code, id, name, familyKana, role) {
