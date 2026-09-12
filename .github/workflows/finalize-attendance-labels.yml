@@ -1,0 +1,26 @@
+name: Finalize attendance labels
+on:
+  push:
+    paths:
+      - .github/workflows/finalize-attendance-labels.yml
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html'); s=p.read_text()
+          for old,new in [('>直近来会日</th>','>最終来会日</th>'),('>管理画面へ戻る</button>','>管理へ戻る</button>')]:
+              if old not in s: raise SystemExit('missing '+old)
+              s=s.replace(old,new)
+          p.write_text(s)
+          PY
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add index.html
+          git commit -m "Align attendance and management labels"
+          git push
