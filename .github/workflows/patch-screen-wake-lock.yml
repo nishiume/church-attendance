@@ -18,31 +18,28 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-
           path = Path("index.html")
           text = path.read_text(encoding="utf-8")
-          marker = '''    window.addEventListener("pageshow", (event) => { if (event.persisted) void sync.start(); });
-
-
-    updateClock();
-'''
-          replacement = '''    window.addEventListener("pageshow", (event) => { if (event.persisted) void sync.start(); });
-
-    let screenWakeLock = null;
-    async function requestScreenWakeLock() {
-      if (!("wakeLock" in navigator) || document.visibilityState != "visible" || screenWakeLock) return;
-      try {
-        screenWakeLock = await navigator.wakeLock.request("screen");
-        screenWakeLock.addEventListener("release", () => { screenWakeLock = null; }, { once: true });
-      } catch (_) {}
-    }
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible") void requestScreenWakeLock();
-    });
-    window.addEventListener("pageshow", () => void requestScreenWakeLock());
-
-    updateClock();
-'''
+          marker = '    window.addEventListener("pageshow", (event) => { if (event.persisted) void sync.start(); });\n\n\n    updateClock();\n'
+          lines = [
+              '    window.addEventListener("pageshow", (event) => { if (event.persisted) void sync.start(); });',
+              '',
+              '    let screenWakeLock = null;',
+              '    async function requestScreenWakeLock() {',
+              '      if (!("wakeLock" in navigator) || document.visibilityState !== "visible" || screenWakeLock) return;',
+              '      try {',
+              '        screenWakeLock = await navigator.wakeLock.request("screen");',
+              '        screenWakeLock.addEventListener("release", () => { screenWakeLock = null; }, { once: true });',
+              '      } catch (_) {}',
+              '    }',
+              '    document.addEventListener("visibilitychange", () => {',
+              '      if (document.visibilityState === "visible") void requestScreenWakeLock();',
+              '    });',
+              '    window.addEventListener("pageshow", () => void requestScreenWakeLock());',
+              '',
+              '    updateClock();',
+          ]
+          replacement = '\n'.join(lines) + '\n'
           if text.count(marker) != 1:
               raise SystemExit(f"expected exactly one marker, found {text.count(marker)}")
           path.write_text(text.replace(marker, replacement, 1), encoding="utf-8")
