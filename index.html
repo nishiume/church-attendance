@@ -2395,6 +2395,18 @@
     window.addEventListener("online", () => void sync.start());
     window.addEventListener("pageshow", (event) => { if (event.persisted) void sync.start(); });
 
+    let screenWakeLock = null;
+    async function requestScreenWakeLock() {
+      if (!("wakeLock" in navigator) || document.visibilityState !== "visible" || screenWakeLock) return;
+      try {
+        screenWakeLock = await navigator.wakeLock.request("screen");
+        screenWakeLock.addEventListener("release", () => { screenWakeLock = null; }, { once: true });
+      } catch (_) {}
+    }
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") void requestScreenWakeLock();
+    });
+    window.addEventListener("pageshow", () => void requestScreenWakeLock());
 
     updateClock();
     historyDate.value = localDateKey(new Date());
