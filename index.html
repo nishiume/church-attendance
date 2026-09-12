@@ -1361,6 +1361,7 @@
       nameSelectTitleText.textContent = "名前から選ぶ";
       nameSelectInstruction.textContent = "名字の最初の行を選んでください";
       nameOptions.className = "name-options name-options--rows";
+      nameOptions.style.gridTemplateRows = "";
       nameOptions.replaceChildren();
       familySelectionButton.hidden = true;
       nameSelectBack.hidden = true;
@@ -1380,7 +1381,8 @@
       selectedKana = "";
       nameSelectTitleText.textContent = selectedKanaRow.label;
       nameSelectInstruction.textContent = "名字の最初の文字を選んでください";
-      nameOptions.className = "name-options";
+      nameOptions.className = "name-options name-options--rows";
+      nameOptions.style.gridTemplateRows = `repeat(${Math.ceil(selectedKanaRow.characters.length / 2)}, auto)`;
       nameOptions.replaceChildren();
       familySelectionButton.hidden = true;
       nameSelectBack.hidden = false;
@@ -1404,6 +1406,7 @@
         ? "受付する方を選んでください"
         : "名前を選ぶと受付が完了します";
       nameOptions.className = "name-options name-options--candidates";
+      nameOptions.style.gridTemplateRows = "";
       nameOptions.replaceChildren();
       nameSelectBack.hidden = false;
       familySelectionButton.hidden = false;
