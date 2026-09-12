@@ -1,0 +1,54 @@
+name: Patch name row order all devices
+
+on:
+  push:
+    paths:
+      - .github/workflows/patch-name-row-order-all-devices.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch index.html
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("index.html")
+          text = path.read_text(encoding="utf-8")
+
+          old = '''    .name-options--rows .name-option {
+      font-size: clamp(1.8rem, 4vw, 2.2rem);
+      line-height: 1.2;
+      white-space: nowrap;
+    }
+'''
+          new = '''    .name-options.name-options--rows {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-rows: repeat(5, auto);
+      grid-auto-flow: column;
+    }
+
+    .name-options--rows .name-option {
+      font-size: clamp(1.8rem, 4vw, 2.2rem);
+      line-height: 1.2;
+      white-space: nowrap;
+    }
+'''
+
+          if text.count(old) != 1:
+              raise SystemExit(f"expected exactly one match, found {text.count(old)}")
+          text = text.replace(old, new, 1)
+          path.write_text(text, encoding="utf-8")
+      - name: Commit index.html
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git diff --cached --quiet && exit 0
+          git commit -m "Use same kana row order on all devices"
+          git push
