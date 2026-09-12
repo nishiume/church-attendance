@@ -1,0 +1,43 @@
+name: Remove legacy admin check-in
+on:
+  push:
+    paths:
+      - .github/workflows/remove-legacy-admin-checkin.yml
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html'); s=p.read_text()
+          def rep(old,new):
+              global s
+              if old not in s: raise SystemExit('missing: '+old[:100])
+              s=s.replace(old,new,1)
+          rep('    let confirmationOrigin = "reception";\n','')
+          start=s.index('    function selectPerson(person, origin = "reception") {')
+          end=s.index('    function selectPeople(people) {', start)
+          s=s[:start]+s[end:]
+          rep('      confirmationOrigin = "reception";\n','')
+          rep('      confirmationOrigin = "reception";\n','')
+          old='''    async function registerAttendance() {\n      if (!authReady || operationPending || !selectedPerson || !(confirmationOrigin === "admin" ? adminAuthorized : receptionReady)) return;\n      const origin = confirmationOrigin;'''
+          new='''    async function registerAttendance() {\n      if (!authReady || operationPending || !selectedPerson || !receptionReady) return;'''
+          rep(old,new)
+          rep('''        const results = await sync.checkIn(people.map((person) => Number(person.id)), origin === "admin");''','''        const results = await sync.checkIn(people.map((person) => Number(person.id)));''')
+          old='''        if (origin === "admin") {\n          showScreen("admin");\n          adminActionMessage.textContent = registrationResults.map((result) => result.alreadyRegistered\n            ? `${result.person.name}さんは来会済みです`\n            : `${result.person.name}さんを受付しました`).join("、");\n          adminActionMessage.hidden = false;\n        } else {\n          completionName.replaceChildren(...registrationResults.map((result) => {\n            const row = document.createElement("div");\n            row.className = "completion-member-row";\n            row.textContent = `${result.person.name}さん：${result.alreadyRegistered ? "来会済みです" : "受付しました"}`;\n            return row;\n          }));\n          showScreen("completion");\n        }'''
+          new='''        completionName.replaceChildren(...registrationResults.map((result) => {\n          const row = document.createElement("div");\n          row.className = "completion-member-row";\n          row.textContent = `${result.person.name}さん：${result.alreadyRegistered ? "来会済みです" : "受付しました"}`;\n          return row;\n        }));\n        showScreen("completion");'''
+          rep(old,new)
+          old='''        async checkIn(ids, admin) {\n          if (!authReady || !(admin ? adminAuthorized : receptionReady)) throw new Error("not_ready");\n          const validate = rows => Array.isArray(rows) && ids.every(id => rows.some(row =>\n            row.member_id === id && ["inserted", "already_registered"].includes(row.status)));\n          const rows = await writeRpc(admin ? "admin_check_in" : "check_in", {\n            p_member_ids: ids, ...(admin ? { p_master_code: masterCode } : {})\n          }, validate);'''
+          new='''        async checkIn(ids) {\n          if (!authReady || !receptionReady) throw new Error("not_ready");\n          const validate = rows => Array.isArray(rows) && ids.every(id => rows.some(row =>\n            row.member_id === id && ["inserted", "already_registered"].includes(row.status)));\n          const rows = await writeRpc("check_in", { p_member_ids: ids }, validate);'''
+          rep(old,new)
+          p.write_text(s)
+          PY
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add index.html
+          git commit -m "Remove legacy admin check-in path"
+          git push
