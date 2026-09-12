@@ -913,7 +913,8 @@
 </head>
 <body>
   <header class="site-header">
-    <button id="screen-switch" class="nav-button" type="button" disabled>管理画面</button>
+    <button id="screen-switch" class="nav-button" type="button" disabled>来会状況</button>
+    <button id="admin-manage-button" class="nav-button" type="button" hidden>管理</button>
   </header>
 
   <div id="connection-controls" class="panel" style="margin:16px auto;max-width:920px" role="region" aria-label="接続状態">
@@ -934,9 +935,13 @@
     </section>
 
     <section id="admin-login-panel" class="panel" aria-labelledby="admin-login-title" hidden>
-      <h1 id="admin-login-title">管理画面</h1>
+      <h1 id="admin-login-title">管理</h1>
       <button id="admin-number" class="form-button reception-action" type="button">番号を入力する</button>
       <p id="admin-number-message" class="message" role="alert" hidden></p>
+      <nav id="protected-admin-menu" class="admin-menu" aria-label="管理メニュー" hidden>
+        <button id="open-access-admin" class="nav-button" type="button">受付者管理</button>
+        <button id="open-role-admin" class="nav-button" type="button">会員登録</button>
+      </nav>
     </section>
 
     <section id="keypad-panel" class="panel" aria-labelledby="keypad-title" hidden>
@@ -990,10 +995,6 @@
 
     <section id="admin-panel" class="panel panel--wide" aria-labelledby="admin-title" hidden>
       <h1 id="admin-title">来会状況</h1>
-      <nav class="admin-menu" aria-label="管理メニュー">
-        <button id="open-access-admin" class="nav-button" type="button" hidden>受付者管理</button>
-        <button id="open-role-admin" class="nav-button" type="button" hidden>会員登録</button>
-      </nav>
       <div class="admin-controls">
         <div class="admin-control">
           <label for="history-date">表示する日付</label>
@@ -1180,6 +1181,7 @@
     };
 
     const screenSwitch = document.getElementById("screen-switch");
+    const adminManageButton = document.getElementById("admin-manage-button");
     const nameSelectTitle = document.getElementById("name-select-title");
     const nameSelectTitleText = nameSelectTitle.querySelector("span");
     const familySelectionButton = document.getElementById("family-selection-button");
@@ -1315,7 +1317,7 @@
         await sync.loadAdmin();
         if (!authReady || epoch !== sync.epoch) return;
         adminAuthorized = true;
-        showScreen("admin");
+        showScreen("adminLogin");
       } catch (error) {
         showAppError(error);
       } finally {
@@ -1456,7 +1458,7 @@
       }
       if (["accessAdmin", "roleAdmin"].includes(name) && (!adminAuthorized || !masterCode)) name = "adminLogin";
       if (name !== "keypad") { keypadBuffer = ""; keypadDisplay.textContent = ""; }
-      if (receptionHomeRequested || name === "adminLogin") {
+      if (receptionHomeRequested) {
         masterCode = "";
         sync.clearAdmin();
       }
@@ -1465,7 +1467,6 @@
         completionTimer = null;
       }
 
-      if (name === "admin" && !adminAuthorized) name = "adminLogin";
 
       currentScreen = name;
       document.querySelector("main").classList.toggle(
@@ -1476,13 +1477,8 @@
       Object.entries(panels).forEach(([panelName, panel]) => {
         panel.hidden = panelName !== name;
       });
-      const managementContext = name === "accessAdmin" || name === "roleAdmin" || name === "admin" ||
-        name === "adminLogin" ||
-        name === "keypad" ||
-        (name === "confirmation" && confirmationOrigin === "admin");
-      screenSwitch.textContent = managementContext
-        ? "受付画面"
-        : "管理画面";
+      screenSwitch.textContent = name === "admin" ? "受付" : "来会状況";
+      adminManageButton.hidden = name !== "admin";
 
       if (name === "accessAdmin") {
         renderAccessAdmin();
@@ -1491,12 +1487,13 @@
       } else if (name === "admin") {
         adminActionMessage.hidden = true;
         adminActionMessage.textContent = "";
-        renderAdmin();
+        void sync.loadAttendanceView().then(() => { if (currentScreen === "admin") renderAdmin(); }).catch(showAppError);
         document.getElementById("admin-title").focus({ preventScroll: true });
       } else if (name === "adminLogin") {
-        adminAuthorized = false;
         clearAdminLogin();
-        adminNumberInput.focus({ preventScroll: true });
+        adminNumberInput.hidden = adminAuthorized;
+        document.getElementById("protected-admin-menu").hidden = !adminAuthorized;
+        if (!adminAuthorized) adminNumberInput.focus({ preventScroll: true });
       } else if (name === "keypad") {
         const firstDigit = keypad.querySelector("[data-digit='1']");
         if (firstDigit) firstDigit.focus({ preventScroll: true });
@@ -1625,8 +1622,6 @@
     }
 
     function renderAdmin() {
-      document.getElementById("open-access-admin").hidden = !masterCode;
-      document.getElementById("open-role-admin").hidden = !masterCode;
       const selectedDate = historyDate.value || localDateKey(new Date());
       const today = localDateKey(new Date());
       historyDate.value = selectedDate;
@@ -1690,7 +1685,7 @@
           .sort();
         const lastDate = memberDates.at(-1) || "";
         lastDateCell.textContent = lastDate
-          ? `${Number(lastDate.slice(5, 7))}/${Number(lastDate.slice(8, 10))}`
+          ? `${Number(lastDate.slice(5, 7))}/${Number(lastDate.slice(8, 10))}（${Math.max(0, Math.round((new Date(`${selectedDate}T00:00:00+09:00`) - new Date(`${lastDate}T00:00:00+09:00`)) / 86400000))}日前）`
           : "";
         const yearCount = memberHistory.filter((historyRecord) => {
           const date = historyRecord.attendanceDate;
@@ -1724,7 +1719,7 @@
     }
 
     function exportPeriodCsv() {
-      if (!authReady || !adminAuthorized || operationPending) return;
+      if (!authReady || operationPending || currentScreen !== "admin") return;
       const start = periodStart.value;
       const end = periodEnd.value;
       const selectedCategory = periodCategory.value;
@@ -1835,14 +1830,16 @@
       exportPeriodCsv();
     });
 
+    adminManageButton.addEventListener("click", () => {
+      if (!authReady || operationPending || currentScreen !== "admin") return;
+      sync.clearAdmin();
+      showScreen("adminLogin");
+    });
+
     screenSwitch.addEventListener("click", () => {
       if (!authReady || operationPending) return;
-      const leavingManagement = currentScreen === "accessAdmin" || currentScreen === "roleAdmin" || currentScreen === "admin" ||
-        currentScreen === "adminLogin" ||
-        currentScreen === "keypad" ||
-        (currentScreen === "confirmation" && confirmationOrigin === "admin");
-      if (leavingManagement) void sync.start();
-      else showScreen("adminLogin");
+      if (currentScreen === "admin") showScreen("reception");
+      else showScreen("admin");
     });
 
     let masterCode = "";
@@ -1885,7 +1882,7 @@
         id: String(member.member_id), name: member.name, familyKana: member.family_kana, role: member.role
       }));
       SORTED_ROSTER = [...ROSTER].sort((a, b) => a.familyKana.localeCompare(b.familyKana, "ja"));
-      if (adminAuthorized && currentScreen === "admin") renderAdmin();
+      if (currentScreen === "admin") renderAdmin();
       if (currentScreen === "accessAdmin") renderAccessAdmin();
       if (currentScreen === "roleAdmin") renderRoleAdmin();
       // Names and family grouping do not change through the supported role UPDATE.
@@ -1927,14 +1924,14 @@
     document.getElementById("open-access-admin").addEventListener("click", () => {
       if (authReady && adminAuthorized && !operationPending) showScreen("accessAdmin");
     });
-    document.getElementById("access-admin-back").addEventListener("click", () => showScreen("admin"));
+    document.getElementById("access-admin-back").addEventListener("click", () => showScreen("adminLogin"));
     document.getElementById("open-role-admin").addEventListener("click", () => {
       if (authReady && adminAuthorized && !operationPending) {
         memberAddMessage.hidden = true;
         showScreen("roleAdmin");
       }
     });
-    document.getElementById("role-admin-back").addEventListener("click", () => showScreen("admin"));
+    document.getElementById("role-admin-back").addEventListener("click", () => showScreen("adminLogin"));
     memberAddForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       if (!authReady || !adminAuthorized || operationPending || !masterCode) return;
@@ -2338,6 +2335,14 @@
           memberId: String(row.member_id), attendanceDate: row.attendance_date,
           attendedAt: row.attended_at, categoryAtAttendance: row.category_at_attendance
         })), start, clearAdmin, loadAdmin,
+        async loadAttendanceView() {
+          if (!authReady) throw new Error("not_ready");
+          const data = await rpc("attendance_view_snapshot");
+          memberCache = data.members;
+          adminHistory = new Map(data.attendance.map(row => [key(row), row]));
+          attendanceCache.forEach(row => adminHistory.set(key(row), row));
+          renderFromCache();
+        },
         verifyMaster: code => rpc("verify_master", { p_master_code: code }),
         async checkIn(ids, admin) {
           if (!authReady || !(admin ? adminAuthorized : receptionReady)) throw new Error("not_ready");
