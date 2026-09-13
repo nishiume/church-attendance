@@ -225,6 +225,7 @@
     #name-select-back,
     #access-admin-back,
     #role-admin-back,
+    #cancel-admin-back,
     #confirm-no {
       font-size: clamp(1.45rem, 3.2vw, 2rem);
       line-height: 1.2;
@@ -941,6 +942,7 @@
       <nav id="protected-admin-menu" class="admin-menu" aria-label="管理メニュー" hidden>
         <button id="open-access-admin" class="nav-button" type="button">受付者管理</button>
         <button id="open-role-admin" class="nav-button" type="button">会員登録</button>
+        <button id="open-cancel-admin" class="nav-button" type="button">受付取消</button>
       </nav>
     </section>
 
@@ -1125,6 +1127,22 @@
       </form>
       <div id="role-admin-list"></div>
     </section>
+    <section id="cancel-admin-panel" class="panel" aria-labelledby="cancel-admin-title" hidden>
+      <button id="cancel-admin-back" class="action-button action-button--secondary" type="button">管理へ戻る</button>
+      <h1 id="cancel-admin-title">受付取消</h1>
+      <div class="member-detail-fields">
+        <div>
+          <label for="cancel-date">日付</label>
+          <input id="cancel-date" type="date">
+        </div>
+        <div>
+          <label for="cancel-search">名前を検索</label>
+          <input id="cancel-search" type="search" autocomplete="off" placeholder="氏名またはかなを入力">
+        </div>
+      </div>
+      <p id="cancel-message" class="export-message" role="status" hidden></p>
+      <div id="cancel-results"></div>
+    </section>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.js"></script>
@@ -1177,7 +1195,8 @@
       completion: document.getElementById("completion-panel"),
       admin: document.getElementById("admin-panel"),
       accessAdmin: document.getElementById("access-admin-panel"),
-      roleAdmin: document.getElementById("role-admin-panel")
+      roleAdmin: document.getElementById("role-admin-panel"),
+      cancelAdmin: document.getElementById("cancel-admin-panel")
     };
 
     const screenSwitch = document.getElementById("screen-switch");
@@ -1228,6 +1247,10 @@
     const memberAddKana = document.getElementById("member-add-kana");
     const memberAddRole = document.getElementById("member-add-role");
     const memberAddMessage = document.getElementById("member-add-message");
+    const cancelDate = document.getElementById("cancel-date");
+    const cancelSearch = document.getElementById("cancel-search");
+    const cancelMessage = document.getElementById("cancel-message");
+    const cancelResults = document.getElementById("cancel-results");
 
     let selectedPerson = null;
     let currentScreen = "reception";
@@ -1274,7 +1297,9 @@
       historyDate.max = today;
       periodStart.max = today;
       periodEnd.max = today;
+      cancelDate.max = today;
       if (!periodEnd.value) periodEnd.value = today;
+      if (!cancelDate.value) cancelDate.value = today;
     }
 
     function clearAdminLogin() {
@@ -1458,7 +1483,7 @@
         renderNameRows();
         name = "nameSelect";
       }
-      if (["accessAdmin", "roleAdmin"].includes(name) && (!adminAuthorized || !masterCode)) name = "adminLogin";
+      if (["accessAdmin", "roleAdmin", "cancelAdmin"].includes(name) && (!adminAuthorized || !masterCode)) name = "adminLogin";
       if (name !== "keypad") { keypadBuffer = ""; keypadDisplay.textContent = ""; }
       if (receptionHomeRequested) {
         masterCode = "";
@@ -1486,6 +1511,8 @@
         renderAccessAdmin();
       } else if (name === "roleAdmin") {
         renderRoleAdmin();
+      } else if (name === "cancelAdmin") {
+        renderCancelAdmin();
       } else if (name === "admin") {
         adminActionMessage.hidden = true;
         adminActionMessage.textContent = "";
@@ -1683,6 +1710,57 @@
       if (selectedMemberDetail) renderMemberDetail();
     }
 
+    function renderCancelAdmin() {
+      if (!adminAuthorized || !masterCode) return;
+      const date = cancelDate.value || localDateKey(new Date());
+      cancelDate.value = date;
+      cancelResults.replaceChildren();
+      const query = normalizeKanaForIndex(cancelSearch.value).toLocaleLowerCase("ja");
+      if (!query) return;
+      const attended = new Set(loadHistory()
+        .filter(record => record.attendanceDate === date)
+        .map(record => record.memberId));
+      SORTED_ROSTER
+        .filter(person => attended.has(person.id))
+        .filter(person => {
+          const name = String(person.name ?? "").normalize("NFKC").toLocaleLowerCase("ja");
+          const kana = normalizeKanaForIndex(person.familyKana).toLocaleLowerCase("ja");
+          return name.includes(query) || kana.includes(query);
+        })
+        .slice(0, 20)
+        .forEach(person => {
+          const row = document.createElement("div");
+          row.className = "role-admin-row";
+          const label = document.createElement("span");
+          label.textContent = person.name;
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "nav-button";
+          button.textContent = "取消";
+          button.addEventListener("click", async () => {
+            if (operationPending || !window.confirm(`${date}の${person.name}さんの受付を取り消しますか？`)) return;
+            setOperationPending(true);
+            clearAppError();
+            cancelMessage.hidden = true;
+            try {
+              const deleted = await sync.cancelAttendance(masterCode, Number(person.id), date);
+              cancelSearch.value = "";
+              cancelMessage.textContent = deleted
+                ? `${person.name}さんの受付を取り消しました。`
+                : "対象の受付はすでに取り消されています。";
+              cancelMessage.hidden = false;
+              renderCancelAdmin();
+            } catch (error) {
+              showAppError(error);
+            } finally {
+              setOperationPending(false);
+            }
+          });
+          row.append(label, button);
+          cancelResults.append(row);
+        });
+    }
+
     function showExportMessage(message, isError = false) {
       exportMessage.textContent = message;
       exportMessage.className = isError
@@ -1800,6 +1878,8 @@
     historyDate.addEventListener("change", renderAdmin);
     memberDetailStart.addEventListener("change", renderMemberDetail);
     memberDetailEnd.addEventListener("change", renderMemberDetail);
+    cancelDate.addEventListener("change", renderCancelAdmin);
+    cancelSearch.addEventListener("input", renderCancelAdmin);
     periodExportForm.addEventListener("submit", (event) => {
       event.preventDefault();
       exportPeriodCsv();
@@ -1860,6 +1940,7 @@
       if (currentScreen === "admin") renderAdmin();
       if (currentScreen === "accessAdmin") renderAccessAdmin();
       if (currentScreen === "roleAdmin") renderRoleAdmin();
+      if (currentScreen === "cancelAdmin") renderCancelAdmin();
       // Names and family grouping do not change through the supported role UPDATE.
     }
     function renderRoleAdmin() {
@@ -1912,6 +1993,14 @@
       }
     });
     document.getElementById("role-admin-back").addEventListener("click", () => showScreen("adminLogin"));
+    document.getElementById("open-cancel-admin").addEventListener("click", () => {
+      if (authReady && adminAuthorized && !operationPending) {
+        cancelSearch.value = "";
+        cancelMessage.hidden = true;
+        showScreen("cancelAdmin");
+      }
+    });
+    document.getElementById("cancel-admin-back").addEventListener("click", () => showScreen("adminLogin"));
     memberAddForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       if (!authReady || !adminAuthorized || operationPending || !masterCode) return;
@@ -2273,7 +2362,13 @@
           return !old || old.name !== member.name || old.family_kana !== member.family_kana || old.role !== member.role;
         });
         memberCache = snapshot.members;
-        snapshot.attendance.forEach(merge);
+        attendanceCache = new Map(snapshot.attendance.map(row => [key(row), row]));
+        if (adminHistory) {
+          [...adminHistory.entries()].forEach(([recordKey, row]) => {
+            if (row.attendance_date === day) adminHistory.delete(recordKey);
+          });
+          snapshot.attendance.forEach(row => adminHistory.set(key(row), row));
+        }
         renderFromCache();
         if (membersChanged && currentScreen === "nameSelect" && !familySelectionMode) {
           if (nameSelectionStage === "candidates" && selectedKana) renderNameCandidates();
@@ -2330,6 +2425,13 @@
             row.member_id === id && ["inserted", "already_registered"].includes(row.status)));
           const rows = await writeRpc("check_in", { p_member_ids: ids }, validate);
           rows.forEach(merge); renderFromCache(); return rows;
+        },
+        async cancelAttendance(code, id, date) {
+          const deleted = await writeRpc("cancel_attendance", {
+            p_master_code: code, p_member_id: id, p_attendance_date: date
+          }, value => typeof value === "boolean");
+          await loadAdmin();
+          return deleted;
         },
         async addMember(code, id, name, familyKana, role) {
           const validate = rows => Array.isArray(rows) && rows.length === 1 && Number(rows[0].member_id) === id;
