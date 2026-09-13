@@ -1760,7 +1760,6 @@
     nameSelectionConfirm.addEventListener("click", () => {
       if (selectedPeople.length === 0) return;
       selectedPerson = selectedPeople[0];
-      confirmationOrigin = "reception";
       registerAttendance();
     });
 
@@ -1796,7 +1795,7 @@
 
     confirmOk.addEventListener("click", registerAttendance);
     confirmNo.addEventListener("click", () => {
-      showScreen(confirmationOrigin === "admin" ? "admin" : "reception");
+      showScreen("reception");
     });
     historyDate.addEventListener("change", renderAdmin);
     memberDetailStart.addEventListener("change", renderMemberDetail);
