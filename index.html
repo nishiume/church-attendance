@@ -1923,7 +1923,7 @@
         member_id_in_use: "この受付番号はすでに使われています。",
         not_ready: "接続の完了後に操作してください。"
       };
-      appError.textContent = messages[error.message] || "通信または処理を確認できません。再接続後、来会状況を確認してください。";
+      appError.textContent = messages[error.message] || `通信または処理を確認できません。[${error.message || "unknown"}]`;
       appError.hidden = false;
     }
     function setOperationPending(value) {
@@ -2315,32 +2315,40 @@
           const old = channel; channel = null;
           if (old) await client.removeChannel(old);
           if (!current(token)) return;
-          const { data, error } = await client.auth.getSession();
-          if (!current(token)) return;
-          if (error) throw error;
-          if (!data.session) { status("Googleでログインしてください。"); return; }
-          sessionUserId = data.session.user.id;
-          const permitted = await rpc("reception_status");
-          if (!current(token)) return;
-          authReady = true; day = localDateKey(new Date());
-          if (!permitted) {
-            status("受付資格がありません。管理画面は利用できます。"); return;
-          }
-          const snapshot = await rpc("reception_snapshot");
+          let stage = "getSession";
+          try {
+            const { data, error } = await client.auth.getSession();
+            if (!current(token)) return;
+            if (error) throw error;
+            if (!data.session) { status("Googleでログインしてください。"); return; }
+            sessionUserId = data.session.user.id;
+            stage = "reception_status";
+            const permitted = await rpc("reception_status");
+            if (!current(token)) return;
+            authReady = true; day = localDateKey(new Date());
+            if (!permitted) {
+              status("受付資格がありません。管理画面は利用できます。"); return;
+            }
+            stage = "reception_snapshot";
+            const snapshot = await rpc("reception_snapshot");
           if (!current(token)) return;
           if (snapshot.today !== day) { void start(); return; }
           memberCache = snapshot.members;
           attendanceCache = new Map(snapshot.attendance.map(row => [key(row), row]));
           buffer.forEach(merge); buffer = []; buffering = false;
           receptionReady = true; renderFromCache(); status("接続済み"); showScreen("reception");
-          void client.realtime.setAuth(data.session.access_token).then(() => subscribe(token)).catch(() => {
-            buffering = false; buffer = [];
-            if (channel && current(token)) {
-              const old = channel; channel = null; void client.removeChannel(old);
-            }
-          });
+            void client.realtime.setAuth(data.session.access_token).then(() => subscribe(token)).catch(() => {
+              buffering = false; buffer = [];
+              if (channel && current(token)) {
+                const old = channel; channel = null; void client.removeChannel(old);
+              }
+            });
+          } catch (error) {
+            error.message = `${stage}: ${error.message || "unknown"}`;
+            throw error;
+          }
         } catch (error) {
-          if (current(token)) { stop("接続を確認できません。再接続してください。"); showAppError(error); }
+          if (current(token)) { stop("接続を確認できません。再接続してください."); showAppError(error); }
         }
       }
       async function loadAdmin() {
