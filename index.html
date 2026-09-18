@@ -2279,8 +2279,7 @@
           }
           if (event === "TOKEN_REFRESHED" && session) {
             setTimeout(() => {
-              void client.realtime.setAuth(session.access_token).then(() => refresh())
-                .catch(() => stop("接続を再確認してください。"));
+              void client.realtime.setAuth(session.access_token).catch(() => {}).then(() => refresh());
             }, 0);
           }
         });
@@ -2303,7 +2302,6 @@
               if (state === "SUBSCRIBED") { clearTimeout(timer); resolve(); }
               else if (["CHANNEL_ERROR", "TIMED_OUT", "CLOSED"].includes(state)) {
                 clearTimeout(timer); reject(new Error("realtime_disconnected"));
-                stop("接続を再確認しています。", true);
               }
             });
           channel = activeChannel;
@@ -2328,9 +2326,6 @@
           if (!permitted) {
             status("受付資格がありません。管理画面は利用できます。"); return;
           }
-          await client.realtime.setAuth(data.session.access_token);
-          if (!current(token)) return;
-          await subscribe(token);
           const snapshot = await rpc("reception_snapshot");
           if (!current(token)) return;
           if (snapshot.today !== day) { void start(); return; }
@@ -2338,6 +2333,12 @@
           attendanceCache = new Map(snapshot.attendance.map(row => [key(row), row]));
           buffer.forEach(merge); buffer = []; buffering = false;
           receptionReady = true; renderFromCache(); status("接続済み"); showScreen("reception");
+          void client.realtime.setAuth(data.session.access_token).then(() => subscribe(token)).catch(() => {
+            buffering = false; buffer = [];
+            if (channel && current(token)) {
+              const old = channel; channel = null; void client.removeChannel(old);
+            }
+          });
         } catch (error) {
           if (current(token)) { stop("接続を確認できません。再接続してください。"); showAppError(error); }
         }
