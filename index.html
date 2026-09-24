@@ -2264,9 +2264,9 @@
       }
       async function initializeClient() {
         if (client) return client;
-        const { createClient } = await import("https://cdn.jsdelivr.net/npm/@neondatabase/neon-js@0.7.0-beta/+esm");
+        const { createClient, BetterAuthVanillaAdapter } = await import("https://cdn.jsdelivr.net/npm/@neondatabase/neon-js@0.7.0-beta/+esm");
         client = createClient({
-          auth: { url: NEON_AUTH_URL },
+          auth: { adapter: BetterAuthVanillaAdapter(), url: NEON_AUTH_URL },
           dataApi: { url: NEON_DATA_API_URL }
         });
         return client;
