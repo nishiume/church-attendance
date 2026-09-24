@@ -2178,7 +2178,7 @@
       });
     }
     const sync = (() => {
-      let epoch = 0, retryTimer = null, day = "", accessToken = "";
+      let client = null, epoch = 0, retryTimer = null, day = "";
       let memberCache = [], attendanceCache = new Map(), accounts = [];
       let adminHistory = null, refreshing = false, sessionUserId = null;
       const key = row => `${row.member_id}:${row.attendance_date}`;
@@ -2209,34 +2209,28 @@
         selectedPerson = null; selectedPeople = []; clearAdmin();
       }
       function stop(message, retry = false) {
-        ++epoch; clearTimeout(retryTimer); authReady = false; accessToken = ""; clearData();
+        ++epoch; clearTimeout(retryTimer); authReady = false; clearData();
         status(message, retry); showScreen("reception");
         retryButton.hidden = false;
         if (retry && navigator.onLine) retryTimer = setTimeout(start, 3000);
       }
       async function rpc(name, args = {}) {
         const token = epoch;
-        const jwt = await getAccessToken();
-        const response = await timedFetch(`${NEON_DATA_API_URL}/rpc/${encodeURIComponent(name)}`, {
-          method: "POST",
-          headers: { "Authorization": `Bearer ${jwt}`, "Content-Type": "application/json", "Accept": "application/json" },
-          body: JSON.stringify(args)
-        });
+        if (!client) throw new Error("not_ready");
+        const { data, error } = await client.rpc(name, args);
         if (!current(token)) throw new Error("not_ready");
-        if (!response.ok) {
-          let payload = null; try { payload = await response.json(); } catch (_) {}
-          const error = new Error(payload?.message || payload?.code || `http_${response.status}`);
-          if (error.message === "auth_denied" || response.status === 401) stop("Googleでログインしてください。");
-          if (error.message === "reception_denied") {
+        if (error) {
+          const message = error.message || error.code || "rpc_error";
+          if (message === "auth_denied") stop("Googleでログインしてください。");
+          if (message === "reception_denied") {
             receptionReady = false; attendanceCache.clear();
             if (!adminAuthorized) { memberCache = []; renderFromCache(); showScreen("reception"); }
             status("受付資格がありません。管理画面は利用できます。");
           }
-          if (error.message === "master_denied") { clearAdmin(); showScreen("adminLogin"); }
-          throw error;
+          if (message === "master_denied") { clearAdmin(); showScreen("adminLogin"); }
+          throw new Error(message);
         }
-        if (response.status === 204) return null;
-        const text = await response.text(); return text ? JSON.parse(text) : null;
+        return data;
       }
       async function writeRpc(name, args = {}, validate = () => true) {
         const token = epoch;
@@ -2268,65 +2262,48 @@
         try { return await fetch(input, { ...init, signal: controller.signal }); }
         finally { clearTimeout(timer); signal?.removeEventListener("abort", abort); }
       }
-      async function authFetch(path, init = {}) {
-        return timedFetch(`${NEON_AUTH_URL}${path}`, { ...init, credentials: "include", headers: { "Content-Type": "application/json", ...(init.headers || {}) } });
-      }
-      function jwtIsUsable(token) {
-        if (!token) return false;
-        try { const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))); return Number(payload.exp || 0) * 1000 > Date.now() + 30000; }
-        catch (_) { return false; }
-      }
-      async function getAccessToken(force = false) {
-        if (!force && jwtIsUsable(accessToken)) return accessToken;
-        const response = await authFetch("/token", { method: "GET" });
-        if (!response.ok) { accessToken = ""; throw new Error(response.status === 401 ? "auth_denied" : `auth_token_${response.status}`); }
-        const data = await response.json(); if (!data?.token) throw new Error("auth_denied"); accessToken = data.token; return accessToken;
-      }
-      async function getSession() {
-        const response = await authFetch("/get-session", { method: "GET" });
-        if (!response.ok) throw new Error(`auth_session_${response.status}`); return response.json();
+      async function initializeClient() {
+        if (client) return client;
+        const { createClient } = await import("https://cdn.jsdelivr.net/npm/@neondatabase/neon-js@0.7.0-beta/+esm");
+        client = createClient({
+          auth: { url: NEON_AUTH_URL },
+          dataApi: { url: NEON_DATA_API_URL }
+        });
+        return client;
       }
       function merge(row) {
         if (row.attendance_date === day) attendanceCache.set(key(row), row);
         if (adminHistory) adminHistory.set(key(row), row);
-      }
-      async function subscribe(token) {
-        buffering = true; buffer = [];
-        await new Promise((resolve, reject) => {
-          const timer = setTimeout(() => reject(new Error("realtime_timeout")), 15000);
-          const activeChannel = client.channel(`attendance-${token}`)
-            .on("postgres_changes", { event: "INSERT", schema: "public", table: "attendance", filter: `attendance_date=eq.${day}` }, payload => {
-              if (!current(token)) return;
-              if (buffering) buffer.push(payload.new); else { merge(payload.new); renderFromCache(); }
-            }).subscribe(state => {
-              if (!current(token) || channel !== activeChannel) { clearTimeout(timer); reject(new Error("not_ready")); return; }
-              if (state === "SUBSCRIBED") { clearTimeout(timer); resolve(); }
-              else if (["CHANNEL_ERROR", "TIMED_OUT", "CLOSED"].includes(state)) {
-                clearTimeout(timer); reject(new Error("realtime_disconnected"));
-              }
-            });
-          channel = activeChannel;
-        });
       }
       async function start() {
         const token = ++epoch; clearTimeout(retryTimer);
         authReady = false; clearData(); status("接続を確認しています", true); showScreen("reception");
         try {
           if (!NEON_AUTH_URL || !NEON_DATA_API_URL) { status("接続設定を確認してください。"); return; }
-          let stage = "getSession";
+          let stage = "initializeClient";
           try {
-            const data = await getSession(); if (!current(token)) return;
-            if (!data?.session || !data?.user) { status("Googleでログインしてください。"); return; }
-            sessionUserId = data.user.id; await getAccessToken(true);
-            stage = "reception_status"; const permitted = await rpc("reception_status"); if (!current(token)) return;
+            const neon = await initializeClient(); if (!current(token)) return;
+            stage = "getSession";
+            const sessionResult = await neon.auth.getSession(); if (!current(token)) return;
+            const session = sessionResult?.data ?? sessionResult;
+            if (!session?.session || !session?.user) { status("Googleでログインしてください。"); return; }
+            sessionUserId = session.user.id;
+            stage = "reception_status";
+            const permitted = await rpc("reception_status"); if (!current(token)) return;
             authReady = true; day = localDateKey(new Date());
             if (!permitted) { status("受付資格がありません。管理画面は利用できます。"); return; }
-            stage = "reception_snapshot"; const snapshot = await rpc("reception_snapshot"); if (!current(token)) return;
+            stage = "reception_snapshot";
+            const snapshot = await rpc("reception_snapshot"); if (!current(token)) return;
             if (snapshot.today !== day) { void start(); return; }
-            memberCache = snapshot.members; attendanceCache = new Map(snapshot.attendance.map(row => [key(row), row]));
+            memberCache = snapshot.members;
+            attendanceCache = new Map(snapshot.attendance.map(row => [key(row), row]));
             receptionReady = true; renderFromCache(); status("接続済み"); showScreen("reception");
-          } catch (error) { error.message = `${stage}: ${error.message || "unknown"}`; throw error; }
-        } catch (error) { if (current(token)) { stop("接続を確認できません。再接続してください."); showAppError(error); } }
+          } catch (error) {
+            error.message = `${stage}: ${error.message || "unknown"}`; throw error;
+          }
+        } catch (error) {
+          if (current(token)) { stop("接続を確認できません。再接続してください."); showAppError(error); }
+        }
       }
       async function loadAdmin() {
         if (!authReady || !masterCode) throw new Error("not_ready");
@@ -2435,16 +2412,21 @@
           await loadAdmin();
         },
         async signIn() {
-          const response = await authFetch("/sign-in/social", { method: "POST", body: JSON.stringify({
-            provider: "google", callbackURL: "https://nishiume.github.io/church-attendance/", newUserCallbackURL: "https://nishiume.github.io/church-attendance/", errorCallbackURL: "https://nishiume.github.io/church-attendance/", additionalParams: { prompt: "select_account" }
-          })});
-          if (!response.ok) throw new Error(`auth_signin_${response.status}`);
-          const data = await response.json(); if (!data?.url) throw new Error("auth_signin_invalid_response"); location.assign(data.url);
+          const neon = await initializeClient();
+          const result = await neon.auth.signIn.social({
+            provider: "google",
+            callbackURL: "https://nishiume.github.io/church-attendance/",
+            errorCallbackURL: "https://nishiume.github.io/church-attendance/",
+            newUserCallbackURL: "https://nishiume.github.io/church-attendance/"
+          });
+          if (result?.error) throw new Error(result.error.message || "auth_signin_error");
         },
         async signOut() {
+          if (!client) await initializeClient();
           stop("ログアウトしています。");
-          const response = await authFetch("/sign-out", { method: "POST", body: "{}" });
-          if (!response.ok) throw new Error(`auth_signout_${response.status}`); status("Googleでログインしてください。");
+          const result = await client.auth.signOut();
+          if (result?.error) throw new Error(result.error.message || "auth_signout_error");
+          status("Googleでログインしてください。");
         },
         offline: () => stop("通信が切れています。受付は停止中です。")
       };
