@@ -2436,7 +2436,7 @@
         },
         async signIn() {
           const response = await authFetch("/sign-in/social", { method: "POST", body: JSON.stringify({
-            provider: "google", callbackURL: location.origin + location.pathname, additionalParams: { prompt: "select_account" }
+            provider: "google", callbackURL: "https://nishiume.github.io/church-attendance/", newUserCallbackURL: "https://nishiume.github.io/church-attendance/", errorCallbackURL: "https://nishiume.github.io/church-attendance/", additionalParams: { prompt: "select_account" }
           })});
           if (!response.ok) throw new Error(`auth_signin_${response.status}`);
           const data = await response.json(); if (!data?.url) throw new Error("auth_signin_invalid_response"); location.assign(data.url);
