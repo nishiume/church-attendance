@@ -1145,13 +1145,12 @@
     </section>
   </main>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.js"></script>
   <script>
     "use strict";
 
     // Public connection values only. Never put a service-role key or master code here.
-    const SUPABASE_URL = "https://fdpqmauaodhnxwqbvoqy.supabase.co";
-    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_zHZ-4UfvMieU_d6cB-C5oQ_AuT6KEz_";
+    const NEON_AUTH_URL = "https://ep-purple-forest-b3t57orv.neonauth.c-4.ap-southeast-1.aws.neon.tech/neondb/auth";
+    const NEON_DATA_API_URL = "https://ep-purple-forest-b3t57orv.apirest.c-4.ap-southeast-1.aws.neon.tech/neondb/rest/v1";
     let ROSTER = [];
     let SORTED_ROSTER = [];
     const ROLE_OPTIONS = Object.freeze([
@@ -2179,8 +2178,8 @@
       });
     }
     const sync = (() => {
-      let client = null, epoch = 0, channel = null, retryTimer = null, day = "";
-      let buffering = false, buffer = [], memberCache = [], attendanceCache = new Map(), accounts = [];
+      let epoch = 0, retryTimer = null, day = "", accessToken = "";
+      let memberCache = [], attendanceCache = new Map(), accounts = [];
       let adminHistory = null, refreshing = false, sessionUserId = null;
       const key = row => `${row.member_id}:${row.attendance_date}`;
       const definitiveWriteErrors = new Set([
@@ -2206,22 +2205,28 @@
         renderFromCache();
       }
       function clearData() {
-        receptionReady = false; memberCache = []; attendanceCache.clear(); buffer = [];
+        receptionReady = false; memberCache = []; attendanceCache.clear();
         selectedPerson = null; selectedPeople = []; clearAdmin();
       }
       function stop(message, retry = false) {
-        ++epoch; clearTimeout(retryTimer); authReady = false; clearData();
-        if (channel && client) void client.removeChannel(channel); channel = null;
+        ++epoch; clearTimeout(retryTimer); authReady = false; accessToken = ""; clearData();
         status(message, retry); showScreen("reception");
         retryButton.hidden = false;
         if (retry && navigator.onLine) retryTimer = setTimeout(start, 3000);
       }
       async function rpc(name, args = {}) {
         const token = epoch;
-        const { data, error } = await client.rpc(name, args);
+        const jwt = await getAccessToken();
+        const response = await timedFetch(`${NEON_DATA_API_URL}/rpc/${encodeURIComponent(name)}`, {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${jwt}`, "Content-Type": "application/json", "Accept": "application/json" },
+          body: JSON.stringify(args)
+        });
         if (!current(token)) throw new Error("not_ready");
-        if (error) {
-          if (error.message === "auth_denied") stop("Googleでログインしてください。");
+        if (!response.ok) {
+          let payload = null; try { payload = await response.json(); } catch (_) {}
+          const error = new Error(payload?.message || payload?.code || `http_${response.status}`);
+          if (error.message === "auth_denied" || response.status === 401) stop("Googleでログインしてください。");
           if (error.message === "reception_denied") {
             receptionReady = false; attendanceCache.clear();
             if (!adminAuthorized) { memberCache = []; renderFromCache(); showScreen("reception"); }
@@ -2230,7 +2235,8 @@
           if (error.message === "master_denied") { clearAdmin(); showScreen("adminLogin"); }
           throw error;
         }
-        return data;
+        if (response.status === 204) return null;
+        const text = await response.text(); return text ? JSON.parse(text) : null;
       }
       async function writeRpc(name, args = {}, validate = () => true) {
         const token = epoch;
@@ -2262,28 +2268,23 @@
         try { return await fetch(input, { ...init, signal: controller.signal }); }
         finally { clearTimeout(timer); signal?.removeEventListener("abort", abort); }
       }
-      function initializeClient() {
-        if (client) return true;
-        if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY || !window.supabase) {
-          status("接続設定または接続プログラムを確認してください。"); return false;
-        }
-        client = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-          auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: "pkce" },
-          global: { fetch: timedFetch }
-        });
-        client.auth.onAuthStateChange((event, session) => {
-          if (event === "SIGNED_OUT") { sessionUserId = null; stop("Googleでログインしてください。"); }
-          if (event === "SIGNED_IN" && session?.user.id !== sessionUserId) {
-            sessionUserId = session?.user.id;
-            setTimeout(() => void start(), 0);
-          }
-          if (event === "TOKEN_REFRESHED" && session) {
-            setTimeout(() => {
-              void client.realtime.setAuth(session.access_token).catch(() => {}).then(() => refresh());
-            }, 0);
-          }
-        });
-        return true;
+      async function authFetch(path, init = {}) {
+        return timedFetch(`${NEON_AUTH_URL}${path}`, { ...init, credentials: "include", headers: { "Content-Type": "application/json", ...(init.headers || {}) } });
+      }
+      function jwtIsUsable(token) {
+        if (!token) return false;
+        try { const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))); return Number(payload.exp || 0) * 1000 > Date.now() + 30000; }
+        catch (_) { return false; }
+      }
+      async function getAccessToken(force = false) {
+        if (!force && jwtIsUsable(accessToken)) return accessToken;
+        const response = await authFetch("/token", { method: "GET" });
+        if (!response.ok) { accessToken = ""; throw new Error(response.status === 401 ? "auth_denied" : `auth_token_${response.status}`); }
+        const data = await response.json(); if (!data?.token) throw new Error("auth_denied"); accessToken = data.token; return accessToken;
+      }
+      async function getSession() {
+        const response = await authFetch("/get-session", { method: "GET" });
+        if (!response.ok) throw new Error(`auth_session_${response.status}`); return response.json();
       }
       function merge(row) {
         if (row.attendance_date === day) attendanceCache.set(key(row), row);
@@ -2311,45 +2312,21 @@
         const token = ++epoch; clearTimeout(retryTimer);
         authReady = false; clearData(); status("接続を確認しています", true); showScreen("reception");
         try {
-          if (!initializeClient()) return;
-          const old = channel; channel = null;
-          if (old) await client.removeChannel(old);
-          if (!current(token)) return;
+          if (!NEON_AUTH_URL || !NEON_DATA_API_URL) { status("接続設定を確認してください。"); return; }
           let stage = "getSession";
           try {
-            const { data, error } = await client.auth.getSession();
-            if (!current(token)) return;
-            if (error) throw error;
-            if (!data.session) { status("Googleでログインしてください。"); return; }
-            sessionUserId = data.session.user.id;
-            stage = "reception_status";
-            const permitted = await rpc("reception_status");
-            if (!current(token)) return;
+            const data = await getSession(); if (!current(token)) return;
+            if (!data?.session || !data?.user) { status("Googleでログインしてください。"); return; }
+            sessionUserId = data.user.id; await getAccessToken(true);
+            stage = "reception_status"; const permitted = await rpc("reception_status"); if (!current(token)) return;
             authReady = true; day = localDateKey(new Date());
-            if (!permitted) {
-              status("受付資格がありません。管理画面は利用できます。"); return;
-            }
-            stage = "reception_snapshot";
-            const snapshot = await rpc("reception_snapshot");
-          if (!current(token)) return;
-          if (snapshot.today !== day) { void start(); return; }
-          memberCache = snapshot.members;
-          attendanceCache = new Map(snapshot.attendance.map(row => [key(row), row]));
-          buffer.forEach(merge); buffer = []; buffering = false;
-          receptionReady = true; renderFromCache(); status("接続済み"); showScreen("reception");
-            void client.realtime.setAuth(data.session.access_token).then(() => subscribe(token)).catch(() => {
-              buffering = false; buffer = [];
-              if (channel && current(token)) {
-                const old = channel; channel = null; void client.removeChannel(old);
-              }
-            });
-          } catch (error) {
-            error.message = `${stage}: ${error.message || "unknown"}`;
-            throw error;
-          }
-        } catch (error) {
-          if (current(token)) { stop("接続を確認できません。再接続してください."); showAppError(error); }
-        }
+            if (!permitted) { status("受付資格がありません。管理画面は利用できます。"); return; }
+            stage = "reception_snapshot"; const snapshot = await rpc("reception_snapshot"); if (!current(token)) return;
+            if (snapshot.today !== day) { void start(); return; }
+            memberCache = snapshot.members; attendanceCache = new Map(snapshot.attendance.map(row => [key(row), row]));
+            receptionReady = true; renderFromCache(); status("接続済み"); showScreen("reception");
+          } catch (error) { error.message = `${stage}: ${error.message || "unknown"}`; throw error; }
+        } catch (error) { if (current(token)) { stop("接続を確認できません。再接続してください."); showAppError(error); } }
       }
       async function loadAdmin() {
         if (!authReady || !masterCode) throw new Error("not_ready");
@@ -2401,8 +2378,6 @@
           if (allowed !== receptionReady && !adminAuthorized) { await start(); return; }
           if (!allowed && receptionReady) {
             receptionReady = false; attendanceCache.clear();
-            const old = channel; channel = null;
-            if (old) await client.removeChannel(old);
           }
           if (receptionReady) await loadReceptionSnapshot();
           else if (adminAuthorized) await loadAdminToday();
@@ -2460,18 +2435,16 @@
           await loadAdmin();
         },
         async signIn() {
-          if (!initializeClient()) return;
-          const { error } = await client.auth.signInWithOAuth({ provider: "google", options: {
-            redirectTo: location.origin + location.pathname, queryParams: { prompt: "select_account" }
-          }});
-          if (error) throw error;
+          const response = await authFetch("/sign-in/social", { method: "POST", body: JSON.stringify({
+            provider: "google", callbackURL: location.origin + location.pathname, additionalParams: { prompt: "select_account" }
+          })});
+          if (!response.ok) throw new Error(`auth_signin_${response.status}`);
+          const data = await response.json(); if (!data?.url) throw new Error("auth_signin_invalid_response"); location.assign(data.url);
         },
         async signOut() {
-          if (!client) return;
           stop("ログアウトしています。");
-          const { error } = await client.auth.signOut();
-          if (error) throw error;
-          status("Googleでログインしてください。");
+          const response = await authFetch("/sign-out", { method: "POST", body: "{}" });
+          if (!response.ok) throw new Error(`auth_signout_${response.status}`); status("Googleでログインしてください。");
         },
         offline: () => stop("通信が切れています。受付は停止中です。")
       };
