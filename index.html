@@ -1258,7 +1258,6 @@
     let keypadBuffer = "";
     let nameSelectionStage = "rows";
     let selectedKanaRow = null;
-    let selectedKana = "";
     let selectedPeople = [];
     let familySelectionMode = false;
     let selectedMemberDetail = null;
@@ -1379,7 +1378,6 @@
     function renderNameRows() {
       nameSelectionStage = "rows";
       selectedKanaRow = null;
-      selectedKana = "";
       selectedPeople = [];
       familySelectionMode = false;
       nameSelectTitleText.textContent = "名前から選ぶ";
@@ -1395,37 +1393,15 @@
       KANA_ROWS.forEach((row) => {
         nameOptions.append(createNameOption(row.label, () => {
           selectedKanaRow = row;
-          renderNameCharacters();
-        }));
-      });
-    }
-
-    function renderNameCharacters() {
-      nameSelectionStage = "characters";
-      selectedKana = "";
-      nameSelectTitleText.textContent = selectedKanaRow.label;
-      nameSelectInstruction.textContent = "名字の最初の文字を選んでください";
-      nameOptions.className = "name-options name-options--rows";
-      nameOptions.style.gridTemplateRows = `repeat(${Math.ceil(selectedKanaRow.characters.length / 2)}, auto)`;
-      nameOptions.replaceChildren();
-      familySelectionButton.hidden = true;
-      nameSelectBack.hidden = false;
-      nameSelectionConfirm.hidden = true;
-      nameSelectionConfirm.disabled = true;
-
-      selectedKanaRow.characters.forEach((character) => {
-        const hasCandidates = ROSTER.some((person) => surnameInitial(person) === character);
-        nameOptions.append(createNameOption(character, () => {
-          selectedKana = character;
           renderNameCandidates();
-        }, false, !hasCandidates));
+        }));
       });
     }
 
     function renderNameCandidates() {
       nameSelectionStage = "candidates";
       selectedPeople = [];
-      nameSelectTitleText.textContent = `${selectedKana}から始まる方`;
+      nameSelectTitleText.textContent = `${selectedKanaRow.label}の方`;
       nameSelectInstruction.textContent = familySelectionMode
         ? "受付する方を選んでください"
         : "名前を選ぶと受付が完了します";
@@ -1439,7 +1415,7 @@
       nameSelectionConfirm.disabled = true;
 
       SORTED_ROSTER
-        .filter((person) => surnameInitial(person) === selectedKana)
+        .filter((person) => selectedKanaRow.characters.includes(surnameInitial(person)))
         .forEach((person) => {
           if (!familySelectionMode) {
             nameOptions.append(createNameOption(
@@ -1826,8 +1802,6 @@
 
     nameSelectBack.addEventListener("click", () => {
       if (nameSelectionStage === "candidates") {
-        renderNameCharacters();
-      } else if (nameSelectionStage === "characters") {
         renderNameRows();
       } else {
         showScreen("reception");
@@ -2334,8 +2308,7 @@
         }
         renderFromCache();
         if (membersChanged && currentScreen === "nameSelect" && !familySelectionMode) {
-          if (nameSelectionStage === "candidates" && selectedKana) renderNameCandidates();
-          else if (nameSelectionStage === "characters" && selectedKanaRow) renderNameCharacters();
+          if (nameSelectionStage === "candidates" && selectedKanaRow) renderNameCandidates();
         }
       }
       async function loadAdminToday() {
